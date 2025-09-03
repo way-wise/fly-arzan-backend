@@ -20,7 +20,7 @@ export const getAmadeusToken = async () => {
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to amadeus token: ${response.statusText}`);
+    throw new Error(`Failed to get amadeus token: ${response.statusText}`);
   }
 
   return (await response.json()).access_token;

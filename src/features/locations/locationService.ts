@@ -13,7 +13,7 @@ export const locationService = {
       throw new HTTPException(502);
     }
 
-    const url = `${LOCATION_API}/reference-data/locations?subType=CITY&keyword=${keyword}`;
+    const url = `${LOCATION_API}/reference-data/locations?subType=CITY&view=LIGHT&keyword=${keyword}`;
 
     const response = await fetch(url, {
       method: "GET",
