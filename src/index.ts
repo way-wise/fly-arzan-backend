@@ -21,6 +21,9 @@ app.use(
 );
 
 // Routes
+app.get("/", (c) => {
+  return c.text("The server is healthy and running...!");
+});
 app.route("/locations", locationModule);
 
 // Not found
