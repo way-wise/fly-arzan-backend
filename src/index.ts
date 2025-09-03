@@ -14,7 +14,11 @@ const app = new Hono().basePath("/api");
 app.use(secureHeaders());
 
 // Cors config
-app.use(cors());
+app.use(
+  cors({
+    origin: process.env.APP_CLIENT_URL!,
+  })
+);
 
 // Routes
 app.route("/locations", locationModule);
