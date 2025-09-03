@@ -1,7 +1,4 @@
 // Amadeus Auth Token
-const API_KEY = process.env.AMADEUS_API_KEY!;
-console.log("API_KEY", API_KEY);
-
 export const getAmadeusToken = async () => {
   const url = "https://test.api.amadeus.com/v1/security/oauth2/token";
 
