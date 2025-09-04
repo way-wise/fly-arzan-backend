@@ -20,7 +20,7 @@ export const flightOfferService = {
       destinationLocationCode: queries.destinationLocationCode,
       departureDate: queries.departureDate.toISOString().split("T")[0],
       adults: queries.adults,
-      max: "14",
+      max: "19",
     });
 
     const url = `${FLIGHT_OFFER_API}/shopping/flight-offers?${searchQueries.toString()}`;
