@@ -6,6 +6,7 @@ import { errorHandler } from "@/lib/errorHandler.js";
 import "@dotenvx/dotenvx/config";
 
 import locationModule from "@/features/locations/locationModule.js";
+import offerModule from "@/features/flight-offers/offerModule.js";
 
 // Hono init
 const app = new Hono().basePath("/api");
@@ -25,6 +26,7 @@ app.get("/", (c) => {
   return c.text("The server is healthy and running...!");
 });
 app.route("/locations", locationModule);
+app.route("/flight-offers", offerModule);
 
 // Not found
 app.notFound((c) => {
