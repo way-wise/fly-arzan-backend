@@ -127,7 +127,7 @@ model city {
 
 model airport {
   id               Int     @id @default(autoincrement())
-  ident            String?
+  ident            String? @unique
   type             String
   name             String
   latitudeDeg      Float?
