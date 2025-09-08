@@ -1,0 +1,164 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "generated"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model user {
+  id            String    @id @default(ulid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean
+  image         String?   @db.Text
+  role          String?
+  banned        Boolean?
+  banReason     String?   @db.Text
+  banExpires    Int?
+  totalPoints   Float     @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  session       session[]
+  account       account[]
+
+  @@index([name])
+  @@index([email])
+  @@index([emailVerified])
+  @@index([role])
+  @@index([banned])
+}
+
+model session {
+  id             String   @id @default(ulid())
+  expiresAt      DateTime
+  token          String   @unique
+  impersonatedBy String?
+  ipAddress      String?
+  userAgent      String?  @db.Text
+  userId         String
+  user           user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId, token])
+}
+
+model account {
+  id                    String    @id @default(ulid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  user      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model country {
+  id               Int       @id @default(autoincrement())
+  iso              String    @unique
+  iso3             String?
+  isoNumeric       Int?
+  fips             String?
+  name             String
+  capital          String?
+  areaSqKm         Float?
+  population       BigInt?
+  continent        String?
+  tld              String?
+  currencyCode     String?
+  currencyName     String?
+  phoneCode        String?
+  postalCodeFormat String?
+  postalCodeRegex  String?
+  languages        String?
+  geonameid        Int?
+  neighbours       String?
+  regions          region[]
+  airlines         airline[]
+  cities           city[]
+}
+
+model region {
+  id            Int       @id @default(autoincrement())
+  code          String    @unique
+  localCode     String?
+  name          String
+  continent     String?
+  isoCountry    String
+  country       country   @relation(fields: [isoCountry], references: [iso], onDelete: Cascade)
+  wikipediaLink String?   @db.Text
+  keywords      String?   @db.Text
+  cities        city[]
+
+  @@index([isoCountry])
+}
+
+model city {
+  id         Int       @id @default(autoincrement())
+  name       String
+  countryIso String
+  country    country   @relation(fields: [countryIso], references: [iso], onDelete: Cascade)
+  regionCode String
+  region     region    @relation(fields: [regionCode], references: [code], onDelete: Cascade)
+  airports   airport[]
+
+  @@index([name])
+  @@index([countryIso])
+  @@index([regionCode])
+}
+
+model airport {
+  id               Int     @id @default(autoincrement())
+  ident            String?
+  type             String
+  name             String
+  latitudeDeg      Float?
+  longitudeDeg     Float?
+  elevationFt      Int?
+  continent        String?
+  cityId           Int
+  city             city    @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  scheduledService Boolean
+  icaoCode         String? @unique
+  iataCode         String?
+  gpsCode          String?
+  localCode        String?
+  homeLink         String? @db.Text
+  wikipediaLink    String? @db.Text
+  keywords         String? @db.Text
+
+  @@index([iataCode])
+  @@index([cityId])
+}
+
+model airline {
+  id         Int     @id @default(autoincrement())
+  name       String
+  iata       String?
+  icao       String? @unique
+  website    String? @db.Text
+  notes      String? @db.Text
+  isUpToDate Boolean
+  countryIso String
+  country    country @relation(fields: [countryIso], references: [iso], onDelete: Cascade)
+
+  @@index([countryIso])
+}
