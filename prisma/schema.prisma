@@ -5,8 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
-  output   = "generated"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -97,15 +96,15 @@ model country {
 }
 
 model region {
-  id            Int       @id @default(autoincrement())
-  code          String    @unique
+  id            Int     @id @default(autoincrement())
+  code          String  @unique
   localCode     String?
   name          String
   continent     String?
   isoCountry    String
-  country       country   @relation(fields: [isoCountry], references: [iso], onDelete: Cascade)
-  wikipediaLink String?   @db.Text
-  keywords      String?   @db.Text
+  country       country @relation(fields: [isoCountry], references: [iso], onDelete: Cascade)
+  wikipediaLink String? @db.Text
+  keywords      String? @db.Text
   cities        city[]
 
   @@index([isoCountry])

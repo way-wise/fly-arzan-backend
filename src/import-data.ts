@@ -6,7 +6,14 @@ const toInt = (v?: string) => (v && v.trim() !== "" ? parseInt(v) : null);
 const toBigInt = (v?: string) => (v && v.trim() !== "" ? BigInt(v) : null);
 const toBoolYes = (v?: string) => (v ? v.toLowerCase() === "yes" : false);
 const norm = (s?: string | null) => (s ? s.trim() : null);
-const normalizeCountry = (s: string) => s.toLowerCase().replace(/^the\s+/, "").replace(/[-_]/g, " ").replace(/\./g, "").replace(/\s+/g, " ").trim();
+const normalizeCountry = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/^the\s+/, "")
+    .replace(/[-_]/g, " ")
+    .replace(/\./g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 import { promises as fs } from "fs";
 import path from "path";
 
