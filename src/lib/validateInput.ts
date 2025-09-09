@@ -24,7 +24,7 @@ export const validateInput = async ({
       throw new AppValidationError(
         type,
         err.message,
-        type === "form" ? err.path || "" : undefined,
+        type === "form" ? err.path || "" : undefined
       );
     }
 
