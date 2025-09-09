@@ -1,29 +1,48 @@
-import { getAmadeusToken } from "@/lib/amadeus.js";
-import { HTTPException } from "hono/http-exception";
-
-// Location BASE API
-const LOCATION_API = "https://test.api.amadeus.com/v1";
+import { prisma } from "@/lib/prisma.js";
+import { getPaginationQuery } from "@/lib/pagination.js";
+import type { PaginationQuery } from "@/schema/paginationSchema.js";
+import { Prisma } from "@prisma/client";
 
 export const locationService = {
-  // Get Location
-  async getLocation(keyword: string) {
-    const token = await getAmadeusToken();
+  async getLocations(keyword: string, pagination: PaginationQuery) {
+    const { skip, take, page, limit } = getPaginationQuery(pagination);
 
-    if (!token) {
-      throw new HTTPException(502);
-    }
+    const where: Prisma.airportWhereInput = {
+      iataCode: {
+        contains: keyword,
+        mode: "insensitive",
+      },
+    };
 
-    const url = `${LOCATION_API}/reference-data/locations/cities?include=AIRPORTS&keyword=${keyword}`;
-
-    const response = await fetch(url, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
+    const airports = await prisma.airport.findMany({
+      where,
+      skip,
+      take,
+      include: {
+        city: {
+          include: {
+            country: true,
+          },
+        },
+      },
     });
 
-    if (!response.ok) {
-      throw new Error(`Failed to search locations: ${response.statusText}`);
-    }
+    const total = await prisma.airport.count({ where });
 
-    return await response.json();
+    return {
+      meta: {
+        total,
+        page,
+        limit,
+      },
+      data: airports.map((airport) => ({
+        city: airport.city.name,
+        country: airport.city.country.name,
+        airport: airport.name,
+        iataCode: airport.iataCode,
+        lat: airport.latitudeDeg,
+        lang: airport.longitudeDeg,
+      })),
+    };
   },
 };
