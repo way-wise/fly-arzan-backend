@@ -1,4 +1,9 @@
+import { promises as fs } from "fs";
+import path, { dirname } from "path";
+import { fileURLToPath } from "url";
 import { prisma } from "./lib/prisma.js";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // --- Helpers ---
 const toFloat = (v?: string) => (v && v.trim() !== "" ? parseFloat(v) : null);
@@ -14,8 +19,6 @@ const normalizeCountry = (s: string) =>
     .replace(/\./g, "")
     .replace(/\s+/g, " ")
     .trim();
-import { promises as fs } from "fs";
-import path from "path";
 
 function parseCSV(content: string): string[][] {
   const rows = content
@@ -62,7 +65,6 @@ async function main() {
 async function importCountries() {
   const filePath = path.join(
     __dirname,
-    "..",
     "..",
     "Airlines",
     "Data",
@@ -128,7 +130,6 @@ async function importRegions() {
   const filePath = path.join(
     __dirname,
     "..",
-    "..",
     "Airlines",
     "Data",
     "Cities Database",
@@ -176,7 +177,6 @@ async function importRegions() {
 async function importCitiesAndAirports() {
   const filePath = path.join(
     __dirname,
-    "..",
     "..",
     "Airlines",
     "Data",
@@ -286,7 +286,6 @@ async function importCitiesAndAirports() {
 async function importAirlines() {
   const filePath = path.join(
     __dirname,
-    "..",
     "..",
     "Airlines",
     "Data",
