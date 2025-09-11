@@ -23,6 +23,21 @@ export const flightOfferService = {
       max: "29",
     });
 
+    if (queries.returnDate !== undefined) {
+      searchQueries.append(
+        "returnDate",
+        queries.returnDate.toISOString().split("T")[0]
+      );
+    }
+
+    if (queries.children) {
+      searchQueries.append("children", queries.children);
+    }
+
+    if (queries.travelClass) {
+      searchQueries.append("travelClass", queries.travelClass);
+    }
+
     const url = `${FLIGHT_OFFER_API}/shopping/flight-offers?${searchQueries.toString()}`;
 
     const response = await fetch(url, {
@@ -34,6 +49,6 @@ export const flightOfferService = {
       throw new Error(`Failed to search locations: ${response.statusText}`);
     }
 
-    return await response.json();
+    return response.json();
   },
 };
