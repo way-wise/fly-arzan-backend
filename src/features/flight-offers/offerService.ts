@@ -1,13 +1,13 @@
 import { getAmadeusToken } from "@/lib/amadeus.js";
 import { HTTPException } from "hono/http-exception";
-import type { FlightOneWaySearchQueryType } from "@/schema/flightSearchSchema.js";
+import type { FlightOfferSearchQueryType } from "@/schema/flightSearchSchema.js";
 
 // Flight Offer BASE API
 const FLIGHT_OFFER_API = "https://test.api.amadeus.com/v2";
 
 export const flightOfferService = {
-  // Get One Way Offers
-  async getOneWayFlightOffers(queries: FlightOneWaySearchQueryType) {
+  // Get Flight Offers
+  async getFlightOffers(queries: FlightOfferSearchQueryType) {
     const token = await getAmadeusToken();
 
     if (!token) {

@@ -1,6 +1,6 @@
 import { date, object, string, type InferType } from "yup";
 
-export const flightOneWaySearchSchema = object({
+export const flightOfferSearchSchema = object({
   originLocationCode: string().required(),
   destinationLocationCode: string().required(),
   departureDate: date()
@@ -14,7 +14,7 @@ export const flightOneWaySearchSchema = object({
       function (value) {
         const { departureDate } = this.parent;
         if (!departureDate || !value) return true;
-        return value > departureDate;
+        return value >= departureDate;
       }
     )
     .optional(),
@@ -23,6 +23,6 @@ export const flightOneWaySearchSchema = object({
   travelClass: string().optional(),
 });
 
-export type FlightOneWaySearchQueryType = InferType<
-  typeof flightOneWaySearchSchema
+export type FlightOfferSearchQueryType = InferType<
+  typeof flightOfferSearchSchema
 >;

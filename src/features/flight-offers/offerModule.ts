@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { flightOfferService } from "./offerService.js";
 import { validateInput } from "@/lib/validateInput.js";
-import { flightOneWaySearchSchema } from "@/schema/flightSearchSchema.js";
+import { flightOfferSearchSchema } from "@/schema/flightSearchSchema.js";
 
 const app = new Hono();
 
@@ -10,15 +10,15 @@ const app = new Hono();
   @access   private
   @desc     Get flight offers (One Way)
 */
-app.get("/one-way", async (c) => {
+app.get("/", async (c) => {
   // Validate Query
   const validatedQuery = await validateInput({
     type: "query",
-    schema: flightOneWaySearchSchema,
+    schema: flightOfferSearchSchema,
     data: c.req.query(),
   });
 
-  const result = await flightOfferService.getOneWayFlightOffers(validatedQuery);
+  const result = await flightOfferService.getFlightOffers(validatedQuery);
   return c.json(result);
 });
 
