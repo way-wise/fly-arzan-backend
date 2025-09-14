@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import type { FlightOfferSearchQueryType } from "@/schema/flightSearchSchema.js";
 
 // Flight Offer BASE API
-const FLIGHT_OFFER_API = "https://test.api.amadeus.com/v2";
+const FLIGHT_OFFER_API = "https://test.api.amadeus.com/v2/shopping";
 
 export const flightOfferService = {
   // Get Flight Offers
@@ -37,7 +37,7 @@ export const flightOfferService = {
       );
     }
 
-    const url = `${FLIGHT_OFFER_API}/shopping/flight-offers?${searchQueries.toString()}`;
+    const url = `${FLIGHT_OFFER_API}/flight-offers?${searchQueries.toString()}`;
 
     const response = await fetch(url, {
       method: "GET",
