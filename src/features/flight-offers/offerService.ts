@@ -1,5 +1,6 @@
 import { getAmadeusToken } from "@/lib/amadeus.js";
 import { HTTPException } from "hono/http-exception";
+import { format } from "date-fns";
 import type { FlightOfferSearchQueryType } from "@/schema/flightSearchSchema.js";
 
 // Flight Offer BASE API
@@ -14,28 +15,26 @@ export const flightOfferService = {
       throw new HTTPException(502);
     }
 
-    // Build Query
+    // Build Query - only include required parameters
     const searchQueries = new URLSearchParams({
       originLocationCode: queries.originLocationCode,
       destinationLocationCode: queries.destinationLocationCode,
-      departureDate: queries.departureDate.toISOString().split("T")[0],
-      adults: queries.adults,
-      max: "29",
+      departureDate: format(queries.departureDate, "yyyy-MM-dd"),
+      adults: queries.adults.toString(),
+      travelClass: queries.travelClass,
     });
 
-    if (queries.returnDate !== undefined) {
+    // Children optional
+    if (queries.children !== undefined && queries.children > 0) {
+      searchQueries.append("children", queries.children.toString());
+    }
+
+    // Return date (Only for round-trip)
+    if (queries.returnDate !== undefined && queries.returnDate !== null) {
       searchQueries.append(
         "returnDate",
-        queries.returnDate.toISOString().split("T")[0]
+        format(queries.returnDate, "yyyy-MM-dd")
       );
-    }
-
-    if (queries.children) {
-      searchQueries.append("children", queries.children);
-    }
-
-    if (queries.travelClass) {
-      searchQueries.append("travelClass", queries.travelClass);
     }
 
     const url = `${FLIGHT_OFFER_API}/shopping/flight-offers?${searchQueries.toString()}`;
@@ -46,9 +45,11 @@ export const flightOfferService = {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to search locations: ${response.statusText}`);
+      throw new HTTPException(500, {
+        message: `Failed to search flights: ${response.statusText}`,
+      });
     }
 
-    return response.json();
+    return await response.json();
   },
 };
