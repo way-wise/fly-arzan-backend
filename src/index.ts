@@ -4,7 +4,6 @@ import { Hono } from "hono";
 import { secureHeaders } from "hono/secure-headers";
 import { cors } from "hono/cors";
 import { errorHandler } from "@/lib/errorHandler.js";
-import { auth } from "@/lib/auth.js";
 
 import authModule from "@/features/auth/authModule.js";
 import locationModule from "@/features/locations/locationModule.js";
