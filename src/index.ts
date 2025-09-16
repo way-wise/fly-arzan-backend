@@ -1,10 +1,12 @@
+import "@dotenvx/dotenvx/config";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { secureHeaders } from "hono/secure-headers";
 import { cors } from "hono/cors";
 import { errorHandler } from "@/lib/errorHandler.js";
-import "@dotenvx/dotenvx/config";
+import { auth } from "@/lib/auth.js";
 
+import authModule from "@/features/auth/authModule.js";
 import locationModule from "@/features/locations/locationModule.js";
 import offerModule from "@/features/flight-offers/offerModule.js";
 
@@ -25,6 +27,7 @@ app.use(
 app.get("/", (c) => {
   return c.text("The server is healthy and running...!");
 });
+app.route("/auth", authModule);
 app.route("/locations", locationModule);
 app.route("/flight-offers", offerModule);
 

@@ -1,6 +1,9 @@
 {
   "name": "fly-arzan-backend",
   "type": "module",
+  "prisma": {
+    "seed": "npx tsx prisma/seed.ts"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc && tsc-alias",
