@@ -29,12 +29,6 @@ const originDestinationSchema = object({
 
         return isSameDay(selectedDate, today) || isAfter(selectedDate, today);
       }),
-    time: string()
-      .optional()
-      .matches(
-        /^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$/,
-        "Time must be in HH:MM:SS format"
-      ),
   }).required("Departure date time range is required"),
 });
 
