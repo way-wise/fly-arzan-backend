@@ -23,7 +23,6 @@ model user {
   banned        Boolean?
   banReason     String?   @db.Text
   banExpires    Int?
-  totalPoints   Float     @default(0)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   session       session[]
