@@ -19,6 +19,7 @@ app.use(secureHeaders());
 app.use(
   cors({
     origin: process.env.APP_CLIENT_URL!,
+    credentials: true,
   })
 );
 
