@@ -26,6 +26,7 @@ app.use(
 app.get("/", (c) => {
   return c.text("The server is healthy and running...!");
 });
+
 app.route("/auth", authModule);
 app.route("/locations", locationModule);
 app.route("/flight-offers", offerModule);
