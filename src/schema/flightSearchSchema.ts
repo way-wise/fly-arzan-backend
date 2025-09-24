@@ -2,6 +2,11 @@ import { date, object, string, number, type InferType } from "yup";
 import { startOfDay, isAfter, isSameDay, isValid, parseISO } from "date-fns";
 
 export const flightOfferSearchSchema = object({
+  currencyCode: string()
+    .optional()
+    .length(3, "Currency code must be 3 characters")
+    .matches(/^[A-Z]{3}$/, "Currency code must be 3 uppercase letters")
+    .default("USD"),
   originLocationCode: string()
     .required("Origin airport code is required")
     .length(3, "Origin code must be 3 characters")

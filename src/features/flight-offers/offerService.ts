@@ -38,6 +38,11 @@ export const flightOfferService = {
       );
     }
 
+    // Search with currency
+    if (queries.currencyCode && queries.currencyCode !== undefined) {
+      searchQueries.append("currencyCode", queries.currencyCode);
+    }
+
     const url = `${FLIGHT_OFFER_API}/flight-offers?${searchQueries.toString()}`;
 
     const response = await fetch(url, {
