@@ -4,13 +4,18 @@ import { Hono } from "hono";
 import { secureHeaders } from "hono/secure-headers";
 import { cors } from "hono/cors";
 import { errorHandler } from "@/lib/errorHandler.js";
+import { logger } from "hono/logger";
 
 import authModule from "@/features/auth/authModule.js";
 import locationModule from "@/features/locations/locationModule.js";
 import offerModule from "@/features/flight-offers/offerModule.js";
+import geoCurrencyModule from "@/features/geo-currency/geoCurrencyModule.js";
 
 // Hono init
 const app = new Hono().basePath("/api");
+
+// Logger
+app.use(logger());
 
 // Secure headers
 app.use(secureHeaders());
@@ -29,6 +34,7 @@ app.get("/", (c) => {
 });
 
 app.route("/auth", authModule);
+app.route("/geo-currency", geoCurrencyModule);
 app.route("/locations", locationModule);
 app.route("/flight-offers", offerModule);
 
