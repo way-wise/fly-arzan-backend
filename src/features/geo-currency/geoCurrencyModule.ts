@@ -1,34 +1,23 @@
 import { Hono } from "hono";
-import { getConnInfo } from "@hono/node-server/conninfo";
-import { Address6 } from "ip-address";
 
 const app = new Hono();
 
+/*
+  @route    GET: /geo-currency
+  @access   public
+  @desc     Get ip geo location and other information
+*/
 app.get("/", async (c) => {
-  const connInfo = getConnInfo(c);
-  const ipAddress = connInfo.remote.address;
-
-  const forwardedFor = c.req.header("X-Forwarded-For");
-  console.log("Forwarded FOR", forwardedFor);
-
-  const actualIp = new Address6(ipAddress as string);
-  // Detected IP address
-  console.log("Detected IP address:", ipAddress);
+  const forwardedForIp = c.req.header("X-Forwarded-For");
 
   const API_KEY = process.env.GEO_LOCATION_API_KEY;
-  const url = `https://api.ipapi.com/api/${actualIp.parsedAddress4}?access_key=${API_KEY}`;
+  const url = `https://api.ipapi.com/api/${forwardedForIp}?access_key=${API_KEY}`;
 
   try {
     const response = await fetch(url);
     const data = await response.json();
 
-    // API response
-    console.log("API response:", data);
-
-    return c.json({
-      data,
-      actualIp,
-    });
+    return c.json(data);
   } catch (error) {
     console.error("Error fetching geolocation data:", error);
   }
