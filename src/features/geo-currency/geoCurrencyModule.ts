@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { getConnInfo } from "@hono/node-server/conninfo";
+import { Address6 } from "ip-address";
 
 const app = new Hono();
 
@@ -10,6 +11,7 @@ app.get("/", async (c) => {
   const forwardedFor = c.req.header("X-Forwarded-For");
   console.log("Forwarded FOR", forwardedFor);
 
+  const actualIp = new Address6(ipAddress as string);
   // Detected IP address
   console.log("Detected IP address:", ipAddress);
 
@@ -23,7 +25,10 @@ app.get("/", async (c) => {
     // API response
     console.log("API response:", data);
 
-    return c.json(data);
+    return c.json({
+      data,
+      actualIp,
+    });
   } catch (error) {
     console.error("Error fetching geolocation data:", error);
   }
