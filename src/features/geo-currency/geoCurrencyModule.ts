@@ -7,6 +7,9 @@ app.get("/", async (c) => {
   const connInfo = getConnInfo(c);
   const ipAddress = connInfo.remote.address;
 
+  const forwardedFor = c.req.header("X-Forwarded-For");
+  console.log("Forwarded FOR", forwardedFor);
+
   // Detected IP address
   console.log("Detected IP address:", ipAddress);
 
