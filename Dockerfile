@@ -7,7 +7,8 @@ FROM base AS builder
 RUN apk add --no-cache gcompat
 WORKDIR /app
 
-COPY pnpm-lock.yaml package.json tsconfig.json src ./
+COPY pnpm-lock.yaml package.json tsconfig.json ./
+COPY src ./src
 COPY prisma ./prisma
 
 RUN pnpm install --frozen-lockfile && \
