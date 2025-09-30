@@ -3,9 +3,32 @@ import { Hono } from "hono";
 const app = new Hono();
 
 /*
+  @route    GET: /geo-currency/currencies
+  @access   public
+  @desc     Get list of all currencies with names
+*/
+app.get("/currencies", async (c) => {
+  const OPEN_EXCHANGE_API_KEY = process.env.OPEN_EXCHANGE_API_KEY;
+  const currenciesUrl = `https://openexchangerates.org/api/currencies.json?app_id=${OPEN_EXCHANGE_API_KEY}`;
+
+  try {
+    const response = await fetch(currenciesUrl);
+    if (!response.ok) {
+      throw new Error("Failed to fetch currencies data");
+    }
+    const currenciesData = await response.json();
+
+    return c.json(currenciesData);
+  } catch (error) {
+    console.error("Error fetching currencies data:", error);
+    return c.json({ error: "Failed to fetch currencies" }, 500);
+  }
+});
+
+/*
   @route    GET: /geo-currency
   @access   public
-  @desc     Get ip geo location and currency information
+  @desc     Get ip geo location and currency information with all exchange rates
 */
 app.get("/", async (c) => {
   const forwardedForIp = c.req.header("X-Forwarded-For");
@@ -32,12 +55,6 @@ app.get("/", async (c) => {
   }
   const exchangeData = await exchangeResponse.json();
 
-  // Extract currency code from geo data
-  const currencyCode = geoData.currency?.code || "USD";
-
-  // Get the exchange rate for the user's currency, default to 1 (USD)
-  const rate = exchangeData.rates[currencyCode] || 1;
-
   return c.json({
     countryCode: geoData.country_code,
     countryName: geoData.country_name,
@@ -48,7 +65,7 @@ app.get("/", async (c) => {
     currency: geoData.currency,
     exchangeRate: {
       base: exchangeData.base,
-      [currencyCode]: rate,
+      rates: exchangeData.rates,
     },
   });
 });
