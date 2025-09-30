@@ -16,7 +16,7 @@ app.get("/", async (c) => {
   console.log("Detected IP address:", ipAddress);
 
   const API_KEY = process.env.GEO_LOCATION_API_KEY;
-  const url = `https://api.ipapi.com/api/${ipAddress}?access_key=${API_KEY}`;
+  const url = `https://api.ipapi.com/api/${actualIp.parsedAddress4}?access_key=${API_KEY}`;
 
   try {
     const response = await fetch(url);
