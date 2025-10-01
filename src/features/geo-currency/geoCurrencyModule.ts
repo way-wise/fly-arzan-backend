@@ -35,7 +35,9 @@ app.get("/", async (c) => {
 
   // Location information from IP Address
   const API_KEY = process.env.GEO_LOCATION_API_KEY;
-  const url = `https://api.ipapi.com/api/${forwardedForIp}?access_key=${API_KEY}`;
+  // Use "check" endpoint if X-Forwarded-For is missing (auto-detects IP)
+  const ipToUse = forwardedForIp || "check";
+  const url = `https://api.ipapi.com/api/${ipToUse}?access_key=${API_KEY}`;
 
   // GET Latest Exchange Rate Based on US Dollar
   const OPEN_EXCHANGE_API_KEY = process.env.OPEN_EXCHANGE_API_KEY;
