@@ -22,7 +22,7 @@ app.use(secureHeaders());
 // Cors config
 app.use(
   cors({
-    origin: process.env.APP_CLIENT_URL!,
+    origin: [process.env.APP_CLIENT_URL!, "http://localhost:5173"],
     credentials: true,
   })
 );
