@@ -32,7 +32,7 @@ const originDestinationSchema = object({
   }).required("Departure date time range is required"),
 });
 
-// Travelr schema
+// Traveler schema
 const travelerSchema = object({
   id: string().required("Traveler ID is required"),
   travelerType: string()
@@ -63,11 +63,6 @@ const cabinRestrictionSchema = object({
 
 // Flight multi-city schema
 export const flightMulticitySchema = object({
-  currencyCode: string()
-    .optional()
-    .length(3, "Currency code must be 3 characters")
-    .matches(/^[A-Z]{3}$/, "Currency code must be 3 uppercase letters")
-    .default("USD"),
   originDestinations: array()
     .of(originDestinationSchema)
     .min(2, "At least 2 origin destinations are required for multi-city")

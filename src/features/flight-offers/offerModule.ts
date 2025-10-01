@@ -9,7 +9,7 @@ const app = new Hono();
 /*
   @route    GET: /flight-offers
   @access   public
-  @desc     Get flight offers (One Way)
+  @desc     Get flight offers (One Way & Round Way)
 */
 app.get("/", async (c) => {
   // Validate Query
@@ -24,7 +24,7 @@ app.get("/", async (c) => {
 });
 
 /*
-  @route    POST: /flight-offers/multicity
+  @route    POST: /flight-offers
   @access   public
   @desc     Get multi-city flight offers
 */

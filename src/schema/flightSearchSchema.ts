@@ -2,16 +2,10 @@ import { date, object, string, number, type InferType } from "yup";
 import { startOfDay, isAfter, isSameDay, isValid, parseISO } from "date-fns";
 
 export const flightOfferSearchSchema = object({
-  currencyCode: string()
-    .optional()
-    .length(3, "Currency code must be 3 characters")
-    .matches(/^[A-Z]{3}$/, "Currency code must be 3 uppercase letters")
-    .default("USD"),
   originLocationCode: string()
     .required("Origin airport code is required")
     .length(3, "Origin code must be 3 characters")
     .matches(/^[A-Z]{3}$/, "Origin code must be 3 uppercase letters"),
-
   destinationLocationCode: string()
     .required("Destination airport code is required")
     .length(3, "Destination code must be 3 characters")
@@ -23,7 +17,6 @@ export const flightOfferSearchSchema = object({
         return value !== this.parent.originLocationCode;
       }
     ),
-
   departureDate: date()
     .transform((value, originalValue) => {
       // Handle string dates from URL params (YYYY-MM-DD format)
@@ -49,7 +42,6 @@ export const flightOfferSearchSchema = object({
         return isSameDay(selectedDate, today) || isAfter(selectedDate, today);
       }
     ),
-
   returnDate: date()
     .transform((value, originalValue) => {
       // Handle string dates from URL params
@@ -88,7 +80,6 @@ export const flightOfferSearchSchema = object({
       }
     )
     .optional(),
-
   adults: number()
     .transform((value, originalValue) => {
       if (typeof originalValue === "string") {
@@ -101,7 +92,6 @@ export const flightOfferSearchSchema = object({
     .max(9, "Maximum 9 adults allowed")
     .integer("Adults must be a whole number")
     .default(1), // Amadeus default
-
   children: number()
     .transform((value, originalValue) => {
       if (typeof originalValue === "string") {
@@ -114,7 +104,6 @@ export const flightOfferSearchSchema = object({
     .max(9, "Maximum 9 children allowed")
     .integer("Children must be a whole number")
     .optional(), // Truly optional as per Amadeus docs
-
   travelClass: string()
     .oneOf(
       ["ECONOMY", "PREMIUM_ECONOMY", "BUSINESS", "FIRST"],
