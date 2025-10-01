@@ -63,6 +63,7 @@ const cabinRestrictionSchema = object({
 
 // Flight multi-city schema
 export const flightMulticitySchema = object({
+  currencyCode: string().default("USD"),
   originDestinations: array()
     .of(originDestinationSchema)
     .min(2, "At least 2 origin destinations are required for multi-city")

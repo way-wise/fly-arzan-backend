@@ -23,6 +23,7 @@ export const flightOfferService = {
       departureDate: format(queries.departureDate, "yyyy-MM-dd"),
       adults: queries.adults.toString(),
       travelClass: queries.travelClass,
+      currencyCode: "USD",
     });
 
     // Children optional
