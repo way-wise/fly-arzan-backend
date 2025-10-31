@@ -9,6 +9,10 @@ import authModule from "@/features/auth/authModule.js";
 import locationModule from "@/features/locations/locationModule.js";
 import offerModule from "@/features/flight-offers/offerModule.js";
 import geoCurrencyModule from "@/features/geo-currency/geoCurrencyModule.js";
+import analyticsModule from "@/features/analytics/analyticsModule.js";
+import reportsModule from "@/features/analytics/reportsModule.js";
+import logsModule from "@/features/analytics/logsModule.js";
+import monitoringModule from "@/features/monitoring/monitoringModule.js";
 
 // Hono init
 const app = new Hono().basePath("/api");
@@ -36,6 +40,10 @@ app.route("/auth", authModule);
 app.route("/geo-currency", geoCurrencyModule);
 app.route("/locations", locationModule);
 app.route("/flight-offers", offerModule);
+app.route("/admin/analytics", analyticsModule);
+app.route("/admin/reports", reportsModule);
+app.route("/admin/logs", logsModule);
+app.route("/admin/monitoring", monitoringModule);
 
 // Not found
 app.notFound((c) => {

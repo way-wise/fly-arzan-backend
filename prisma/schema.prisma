@@ -160,3 +160,53 @@ model airline {
 
   @@index([countryIso])
 }
+
+/// Analytics: records of user searches
+model searchEvent {
+  id            String   @id @default(ulid())
+  createdAt     DateTime @default(now())
+  // route info
+  origin        String   // IATA code (e.g., ALA)
+  destination   String   // IATA code (e.g., IST)
+  tripType      String   // one-way | round-trip | multi-city
+  travelClass   String?  // economy | business | first
+  adults        Int      @default(1)
+  children      Int      @default(0)
+  // device info (parsed from userAgent)
+  browser       String?
+  browserVersion String?
+  os            String?
+  osVersion     String?
+  deviceType    String?  // mobile | tablet | desktop
+  // context
+  userAgent     String?  @db.Text
+  ipMasked      String?
+  country       String?  // ISO country code (from IP geolocation)
+  region        String?  // Region/state (from IP geolocation)
+
+  @@index([createdAt])
+  @@index([origin, destination])
+  @@index([tripType])
+  @@index([os])
+  @@index([browser])
+  @@index([deviceType])
+  @@index([country])
+}
+
+/// Analytics: records of click-outs to partners
+model clickOutEvent {
+  id            String   @id @default(ulid())
+  createdAt     DateTime @default(now())
+  // route info
+  origin        String
+  destination   String
+  tripType      String
+  partner       String?  // partner identifier if available
+  // context
+  userAgent     String?  @db.Text
+  ipMasked      String?
+
+  @@index([createdAt])
+  @@index([origin, destination])
+  @@index([tripType])
+}
