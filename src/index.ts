@@ -5,6 +5,7 @@ import { secureHeaders } from "hono/secure-headers";
 import { cors } from "hono/cors";
 import { errorHandler } from "@/lib/errorHandler.js";
 import { logger } from "hono/logger";
+import { randomUUID } from "crypto";
 import authModule from "@/features/auth/authModule.js";
 import locationModule from "@/features/locations/locationModule.js";
 import offerModule from "@/features/flight-offers/offerModule.js";
@@ -28,8 +29,19 @@ app.use(
   cors({
     origin: [process.env.APP_CLIENT_URL!, "http://localhost:5173"],
     credentials: true,
+    allowHeaders: ["Content-Type", "Authorization", "x-session-id"],
   })
 );
+
+// Request ID header for attribution & tracing (no Context typing issues)
+app.use("*", async (c, next) => {
+  try {
+    const id = randomUUID();
+    // attach to response headers for observability
+    c.res.headers.set("x-request-id", id);
+  } catch {}
+  await next();
+});
 
 // Routes
 app.get("/", (c) => {

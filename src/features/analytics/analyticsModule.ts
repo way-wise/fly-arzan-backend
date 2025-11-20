@@ -1,6 +1,9 @@
 import { Hono } from "hono";
 import { validateInput } from "@/lib/validateInput.js";
-import { searchEventSchema, clickOutEventSchema } from "@/schema/analyticsSchema.js";
+import {
+  searchEventSchema,
+  clickOutEventSchema,
+} from "@/schema/analyticsSchema.js";
 import { prisma } from "@/lib/prisma.js";
 import { parseUserAgent } from "@/lib/deviceParser.js";
 
@@ -23,6 +26,35 @@ const maskIp = (ip?: string | null) => {
   return undefined;
 };
 
+// Extract simple cookie value by name from Cookie header
+const getCookie = (cookieHeader: string | undefined, name: string) => {
+  if (!cookieHeader) return undefined;
+  const parts = cookieHeader.split(";");
+  for (const p of parts) {
+    const [k, ...rest] = p.trim().split("=");
+    if (k === name) return rest.join("=");
+  }
+  return undefined;
+};
+
+// Extract UTM parameters from a URL string (e.g., Referer)
+const pickUtmFromUrl = (urlStr?: string | null) => {
+  try {
+    if (!urlStr) return {} as Record<string, string | undefined>;
+    const u = new URL(urlStr);
+    const q = u.searchParams;
+    return {
+      utmSource: q.get("utm_source") || undefined,
+      utmMedium: q.get("utm_medium") || undefined,
+      utmCampaign: q.get("utm_campaign") || undefined,
+      utmContent: q.get("utm_content") || undefined,
+      utmTerm: q.get("utm_term") || undefined,
+    };
+  } catch {
+    return {} as Record<string, string | undefined>;
+  }
+};
+
 /*
   @route   POST /search
   @access  public (to be protected later)
@@ -36,7 +68,25 @@ app.post("/search", async (c) => {
   });
 
   const ua = c.req.header("user-agent") ?? undefined;
-  const ip = c.req.header("x-forwarded-for")?.split(",")[0] || (c.req.raw as any).socket?.remoteAddress;
+  const ip =
+    c.req.header("x-forwarded-for")?.split(",")[0] ||
+    (c.req.raw as any).socket?.remoteAddress;
+
+  // Context enrichment
+  const cookieHeader = c.req.header("cookie");
+  const sessionId =
+    (validated as any).sessionId ||
+    c.req.header("x-session-id") ||
+    getCookie(cookieHeader, "fa_sid");
+  const referrer = c.req.header("referer") ?? undefined;
+  const utmFromBody = {
+    utmSource: (validated as any).utmSource,
+    utmMedium: (validated as any).utmMedium,
+    utmCampaign: (validated as any).utmCampaign,
+    utmContent: (validated as any).utmContent,
+    utmTerm: (validated as any).utmTerm,
+  };
+  const utmFromReferrer = pickUtmFromUrl(referrer);
 
   // Parse device info from user agent
   const deviceInfo = ua ? parseUserAgent(ua) : null;
@@ -60,7 +110,15 @@ app.post("/search", async (c) => {
       userAgent: ua,
       ipMasked: maskIp(ip),
       country: null, // TODO: Add geolocation
-      region: null,  // TODO: Add geolocation
+      region: null, // TODO: Add geolocation
+      // affiliate context
+      sessionId: sessionId,
+      referrer: referrer,
+      utmSource: utmFromBody.utmSource ?? utmFromReferrer.utmSource,
+      utmMedium: utmFromBody.utmMedium ?? utmFromReferrer.utmMedium,
+      utmCampaign: utmFromBody.utmCampaign ?? utmFromReferrer.utmCampaign,
+      utmContent: utmFromBody.utmContent ?? utmFromReferrer.utmContent,
+      utmTerm: utmFromBody.utmTerm ?? utmFromReferrer.utmTerm,
     },
   });
 
@@ -80,7 +138,9 @@ app.post("/clickout", async (c) => {
   });
 
   const ua = c.req.header("user-agent") ?? undefined;
-  const ip = c.req.header("x-forwarded-for")?.split(",")[0] || (c.req.raw as any).socket?.remoteAddress;
+  const ip =
+    c.req.header("x-forwarded-for")?.split(",")[0] ||
+    (c.req.raw as any).socket?.remoteAddress;
 
   const created = await prisma.clickOutEvent.create({
     data: {
@@ -90,6 +150,18 @@ app.post("/clickout", async (c) => {
       partner: validated.partner,
       userAgent: ua,
       ipMasked: maskIp(ip),
+      // affiliate context
+      sessionId: sessionId,
+      requestId: c.get("requestId") as string | undefined,
+      referrer: referrer,
+      utmSource: (validated as any).utmSource,
+      utmMedium: (validated as any).utmMedium,
+      utmCampaign: (validated as any).utmCampaign,
+      utmContent: (validated as any).utmContent,
+      utmTerm: (validated as any).utmTerm,
+      price: (validated as any).price ?? undefined,
+      currency: (validated as any).currency ?? undefined,
+      deepLink: (validated as any).deepLink ?? undefined,
     },
   });
 

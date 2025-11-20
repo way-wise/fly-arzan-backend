@@ -1,10 +1,87 @@
 import { Hono } from "hono";
+import { performance } from "node:perf_hooks";
 import { prisma } from "@/lib/prisma.js";
 
 const app = new Hono();
 
 // Track server start time for uptime
 const serverStartTime = Date.now();
+
+// Polling configuration
+const POLL_INTERVAL_MS = 120_000; // 2 minutes
+const HEALTHY_THRESHOLD_MS = 500; // <500ms healthy, otherwise degraded
+
+// Cached health results
+type ComponentStatus = "healthy" | "degraded" | "down" | "unknown";
+interface CachedCheck {
+  status: ComponentStatus;
+  latencyMs: number | null;
+  lastChecked: Date | null;
+  lastError: string | null;
+}
+
+const dbHealth: CachedCheck = {
+  status: "unknown",
+  latencyMs: null,
+  lastChecked: null,
+  lastError: null,
+};
+
+const amadeusHealth: CachedCheck = {
+  status: "unknown",
+  latencyMs: null,
+  lastChecked: null,
+  lastError: null,
+};
+
+async function pollDatabase() {
+  const start = performance.now();
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    const ms = Math.round(performance.now() - start);
+    dbHealth.latencyMs = ms;
+    dbHealth.status = ms < HEALTHY_THRESHOLD_MS ? "healthy" : "degraded";
+    dbHealth.lastChecked = new Date();
+    dbHealth.lastError = null;
+  } catch (e: any) {
+    dbHealth.status = "down";
+    dbHealth.lastChecked = new Date();
+    dbHealth.lastError = e?.message || String(e);
+  }
+}
+
+async function pollAmadeus() {
+  const start = performance.now();
+  try {
+    // We don't rely on authenticated endpoints. A lightweight reachability probe is enough.
+    // Accept any HTTP response as "reachable"; only network errors/timeouts are treated as down.
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch("https://api.amadeus.com/", {
+      method: "GET",
+      signal: controller.signal,
+    });
+    clearTimeout(id);
+    const ms = Math.round(performance.now() - start);
+    amadeusHealth.latencyMs = ms;
+    amadeusHealth.status = ms < HEALTHY_THRESHOLD_MS ? "healthy" : "degraded";
+    amadeusHealth.lastChecked = new Date();
+    amadeusHealth.lastError = null;
+  } catch (e: any) {
+    amadeusHealth.status = "down";
+    amadeusHealth.lastChecked = new Date();
+    amadeusHealth.lastError =
+      e?.name === "AbortError" ? "timeout" : e?.message || String(e);
+  }
+}
+
+// Kick off polling loop (best-effort in-memory cache)
+void pollDatabase();
+void pollAmadeus();
+setInterval(() => {
+  void pollDatabase();
+  void pollAmadeus();
+}, POLL_INTERVAL_MS);
 
 // Simple in-memory quota tracking (replace with Redis/DB for production)
 let quotaUsage = {
@@ -13,7 +90,7 @@ let quotaUsage = {
   lastReset: new Date().toISOString().split("T")[0], // YYYY-MM-DD
 };
 
-// Track last Amadeus API check
+// Track last Amadeus API check (compat field used by alerts endpoint)
 let lastAmadeusCheck = {
   status: "unknown" as "healthy" | "degraded" | "down" | "unknown",
   lastChecked: null as Date | null,
@@ -26,30 +103,29 @@ let lastAmadeusCheck = {
 */
 app.get("/health", async (c) => {
   const checks = {
-    database: "unknown",
-    amadeus: "unknown",
-    uptime: 0,
-  };
-
-  // Check database
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    checks.database = "healthy";
-  } catch (err) {
-    checks.database = "down";
-  }
-
-  // Use cached Amadeus status (updated by quota tracking or on-demand)
-  checks.amadeus = lastAmadeusCheck.status;
-
-  // Calculate uptime in seconds
-  checks.uptime = Math.floor((Date.now() - serverStartTime) / 1000);
+    database: dbHealth.status,
+    amadeus: amadeusHealth.status,
+    uptime: Math.floor((Date.now() - serverStartTime) / 1000),
+    latencies: {
+      databaseMs: dbHealth.latencyMs,
+      amadeusMs: amadeusHealth.latencyMs,
+    },
+    lastChecked: {
+      database: dbHealth.lastChecked?.toISOString() || null,
+      amadeus: amadeusHealth.lastChecked?.toISOString() || null,
+    },
+  } as const;
 
   // Determine overall status
   let overallStatus: "green" | "yellow" | "red" = "green";
   if (checks.database === "down" || checks.amadeus === "down") {
     overallStatus = "red";
-  } else if (checks.amadeus === "degraded" || checks.amadeus === "unknown") {
+  } else if (
+    checks.database === "degraded" ||
+    checks.amadeus === "degraded" ||
+    checks.database === "unknown" ||
+    checks.amadeus === "unknown"
+  ) {
     overallStatus = "yellow";
   }
 
@@ -124,6 +200,11 @@ app.post("/amadeus/status", async (c) => {
   lastAmadeusCheck.status = status || "unknown";
   lastAmadeusCheck.lastChecked = new Date();
   lastAmadeusCheck.lastError = error || null;
+
+  // Also update cached amadeus health to reflect external signals
+  amadeusHealth.status = lastAmadeusCheck.status;
+  amadeusHealth.lastChecked = lastAmadeusCheck.lastChecked;
+  amadeusHealth.lastError = lastAmadeusCheck.lastError;
 
   // If down for >1 minute, trigger alert
   if (status === "down") {
