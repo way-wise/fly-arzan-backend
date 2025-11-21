@@ -55,6 +55,39 @@ const pickUtmFromUrl = (urlStr?: string | null) => {
   }
 };
 
+// Simple in-memory geo cache
+type Geo = { country: string | null; region: string | null; ts: number };
+const geoCache = new Map<string, Geo>();
+const GEO_TTL_MS = 10 * 60 * 1000;
+const cleanIp = (ip?: string | null) =>
+  ip ? ip.replace("::ffff:", "") : undefined;
+const lookupGeo = async (ip?: string | null) => {
+  const ipAddr = cleanIp(ip);
+  if (!ipAddr) return { country: null, region: null } as const;
+  const cached = geoCache.get(ipAddr);
+  const now = Date.now();
+  if (cached && now - cached.ts < GEO_TTL_MS) {
+    return { country: cached.country, region: cached.region } as const;
+  }
+  try {
+    const key = process.env.GEO_LOCATION_API_KEY;
+    if (!key) return { country: null, region: null } as const;
+    const url = `https://api.ipapi.com/api/${ipAddr}?access_key=${key}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("geo failed");
+    const j = await res.json();
+    const geo = {
+      country: (j.country_code as string) || null,
+      region: (j.region_name as string) || null,
+      ts: now,
+    };
+    geoCache.set(ipAddr, geo);
+    return { country: geo.country, region: geo.region } as const;
+  } catch {
+    return { country: null, region: null } as const;
+  }
+};
+
 /*
   @route   POST /search
   @access  public (to be protected later)
@@ -90,9 +123,7 @@ app.post("/search", async (c) => {
 
   // Parse device info from user agent
   const deviceInfo = ua ? parseUserAgent(ua) : null;
-
-  // TODO: Add IP geolocation lookup here (e.g., using ipapi.co or MaxMind)
-  // For now, we'll leave country/region as null
+  const geo = await lookupGeo(ip);
 
   const created = await prisma.searchEvent.create({
     data: {
@@ -109,8 +140,8 @@ app.post("/search", async (c) => {
       deviceType: deviceInfo?.deviceType,
       userAgent: ua,
       ipMasked: maskIp(ip),
-      country: null, // TODO: Add geolocation
-      region: null, // TODO: Add geolocation
+      country: geo.country,
+      region: geo.region,
       // affiliate context
       sessionId: sessionId,
       referrer: referrer,

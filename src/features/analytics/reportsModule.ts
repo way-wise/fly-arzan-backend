@@ -6,7 +6,8 @@ import { reportsQuerySchema } from "@/schema/analyticsSchema.js";
 const app = new Hono();
 
 const now = () => new Date();
-const subHours = (d: Date, h: number) => new Date(d.getTime() - h * 60 * 60 * 1000);
+const subHours = (d: Date, h: number) =>
+  new Date(d.getTime() - h * 60 * 60 * 1000);
 
 const buildCsv = (rows: Record<string, any>[]) => {
   if (!rows.length) return "";
@@ -29,10 +30,18 @@ app.get("/metrics", async (c) => {
   const startPrev24 = subHours(startLast24, 24);
 
   const [searchLast, searchPrev, clickLast, clickPrev] = await Promise.all([
-    prisma.searchEvent.count({ where: { createdAt: { gte: startLast24, lt: end } } }),
-    prisma.searchEvent.count({ where: { createdAt: { gte: startPrev24, lt: startLast24 } } }),
-    prisma.clickOutEvent.count({ where: { createdAt: { gte: startLast24, lt: end } } }),
-    prisma.clickOutEvent.count({ where: { createdAt: { gte: startPrev24, lt: startLast24 } } }),
+    prisma.searchEvent.count({
+      where: { createdAt: { gte: startLast24, lt: end } },
+    }),
+    prisma.searchEvent.count({
+      where: { createdAt: { gte: startPrev24, lt: startLast24 } },
+    }),
+    prisma.clickOutEvent.count({
+      where: { createdAt: { gte: startLast24, lt: end } },
+    }),
+    prisma.clickOutEvent.count({
+      where: { createdAt: { gte: startPrev24, lt: startLast24 } },
+    }),
   ]);
 
   const clickRateLast = searchLast ? clickLast / searchLast : 0;
@@ -52,7 +61,11 @@ app.get("/metrics", async (c) => {
       totalSearches: searchLast,
       totalClickOuts: clickLast,
       clickOutRate: clickRateLast,
-      topRoutes: topLast.map((r) => ({ origin: r.origin, destination: r.destination, count: r._count.id })),
+      topRoutes: topLast.map((r) => ({
+        origin: r.origin,
+        destination: r.destination,
+        count: r._count.id,
+      })),
     },
     prev24h: {
       totalSearches: searchPrev,
@@ -71,8 +84,14 @@ app.get("/metrics/timeseries", async (c) => {
   const start = subHours(end, 24);
 
   const [searches, clicks] = await Promise.all([
-    prisma.searchEvent.findMany({ where: { createdAt: { gte: start, lt: end } }, select: { createdAt: true } }),
-    prisma.clickOutEvent.findMany({ where: { createdAt: { gte: start, lt: end } }, select: { createdAt: true } }),
+    prisma.searchEvent.findMany({
+      where: { createdAt: { gte: start, lt: end } },
+      select: { createdAt: true },
+    }),
+    prisma.clickOutEvent.findMany({
+      where: { createdAt: { gte: start, lt: end } },
+      select: { createdAt: true },
+    }),
   ]);
 
   const buckets: { label: string; searches: number; clickouts: number }[] = [];
@@ -107,24 +126,35 @@ app.get("/metrics/timeseries", async (c) => {
   @query  type=device|browser|os
 */
 app.get("/metrics/breakdown", async (c) => {
-  const type = (c.req.query("type") || "device") as "device" | "browser" | "os";
+  const type = (c.req.query("type") || "device") as
+    | "device"
+    | "browser"
+    | "os"
+    | "geo";
   const end = now();
   const start = subHours(end, 24);
 
-  let byField: "deviceType" | "browser" | "os" = "deviceType";
+  let byField: "deviceType" | "browser" | "os" | "country" = "deviceType";
   if (type === "browser") byField = "browser";
   if (type === "os") byField = "os";
+  if (type === "geo") byField = "country";
 
   const rows = await prisma.searchEvent.groupBy({
     by: [byField],
     _count: { id: true },
-    where: { createdAt: { gte: start, lt: end }, [byField]: { not: null } as any },
+    where: {
+      createdAt: { gte: start, lt: end },
+      [byField]: { not: null } as any,
+    },
     orderBy: { _count: { id: "desc" } },
     take: 8,
   });
 
   return c.json({
-    breakdown: rows.map((r: any) => ({ key: r[byField] as string, count: r._count.id })),
+    breakdown: rows.map((r: any) => ({
+      key: (r[byField] as string) ?? "Unknown",
+      count: r._count.id,
+    })),
   });
 });
 
@@ -138,9 +168,19 @@ app.get("/top-routes", async (c) => {
     schema: reportsQuerySchema,
     data: c.req.query(),
   });
-  const end = now();
-  const start = q.range === "prev24h" ? subHours(end, 48) : subHours(end, 24);
-  const cutoff = q.range === "prev24h" ? subHours(end, 24) : end;
+  // Support explicit startDate/endDate if provided; fallback to last24h/prev24h
+  const end = q.endDate ? new Date(q.endDate as any) : now();
+  const start = q.startDate
+    ? new Date(q.startDate as any)
+    : q.range === "prev24h"
+    ? subHours(end, 48)
+    : subHours(end, 24);
+  const cutoff =
+    q.startDate && q.endDate
+      ? end
+      : q.range === "prev24h"
+      ? subHours(end, 24)
+      : end;
 
   const top = await prisma.searchEvent.groupBy({
     by: ["origin", "destination"],
@@ -150,12 +190,19 @@ app.get("/top-routes", async (c) => {
     take: q.limit ?? 10,
   });
 
-  const rows = top.map((r) => ({ origin: r.origin, destination: r.destination, searches: r._count.id }));
+  const rows = top.map((r) => ({
+    origin: r.origin,
+    destination: r.destination,
+    searches: r._count.id,
+  }));
 
   if ((q.format ?? "json") === "csv") {
     const csv = buildCsv(rows);
     c.header("Content-Type", "text/csv; charset=utf-8");
-    c.header("Content-Disposition", `attachment; filename=top-routes-${q.range ?? "last24h"}.csv`);
+    c.header(
+      "Content-Disposition",
+      `attachment; filename=top-routes-${q.range ?? "last24h"}.csv`
+    );
     return c.body(csv);
   }
 
@@ -177,8 +224,12 @@ app.get("/clickout-rate", async (c) => {
   const cutoff = q.range === "prev24h" ? subHours(end, 24) : end;
 
   const [searches, clicks] = await Promise.all([
-    prisma.searchEvent.count({ where: { createdAt: { gte: start, lt: cutoff } } }),
-    prisma.clickOutEvent.count({ where: { createdAt: { gte: start, lt: cutoff } } }),
+    prisma.searchEvent.count({
+      where: { createdAt: { gte: start, lt: cutoff } },
+    }),
+    prisma.clickOutEvent.count({
+      where: { createdAt: { gte: start, lt: cutoff } },
+    }),
   ]);
 
   const rate = searches ? clicks / searches : 0;
@@ -186,7 +237,10 @@ app.get("/clickout-rate", async (c) => {
   if ((q.format ?? "json") === "csv") {
     const csv = buildCsv([{ searches, clicks, rate }]);
     c.header("Content-Type", "text/csv; charset=utf-8");
-    c.header("Content-Disposition", `attachment; filename=clickout-rate-${q.range ?? "last24h"}.csv`);
+    c.header(
+      "Content-Disposition",
+      `attachment; filename=clickout-rate-${q.range ?? "last24h"}.csv`
+    );
     return c.body(csv);
   }
 
