@@ -425,15 +425,47 @@ app.get("/engagement/series", async (c) => {
   @desc   Aggregate searches by user region from country codes
 */
 app.get("/geo/regions", async (c) => {
-  const end = now();
-  const start = subHours(end, 24);
+  const qs = c.req.query();
+  const end = qs.endDate ? new Date(qs.endDate as string) : now();
+  const start = qs.startDate
+    ? new Date(qs.startDate as string)
+    : subHours(end, 24);
+  const group = (qs.group || "region") as "region" | "country";
+  const top = Math.max(
+    1,
+    Math.min(12, parseInt((qs.top as string) || "6", 10))
+  );
+
   const rows = await prisma.searchEvent.findMany({
     where: { createdAt: { gte: start, lt: end }, country: { not: null } },
     select: { country: true },
   });
+
+  if (group === "country") {
+    const agg = new Map<string, number>();
+    for (const r of rows) {
+      const key = (r.country as string) || "Unknown";
+      agg.set(key, (agg.get(key) || 0) + 1);
+    }
+    const sorted = Array.from(agg.entries()).sort((a, b) => b[1] - a[1]);
+    const head = sorted
+      .slice(0, top)
+      .map(([country, searches]) => ({ country, searches }));
+    const otherCount = sorted.slice(top).reduce((a, [, v]) => a + v, 0);
+    const result =
+      otherCount > 0
+        ? [...head, { country: "Other", searches: otherCount }]
+        : head;
+    return c.json(result);
+  }
+
   const regionMap: Record<string, string> = {
     US: "North America",
     CA: "North America",
+    MX: "North America",
+    BR: "South America",
+    AR: "South America",
+    CL: "South America",
     GB: "Europe",
     DE: "Europe",
     FR: "Europe",
@@ -441,19 +473,39 @@ app.get("/geo/regions", async (c) => {
     IT: "Europe",
     NL: "Europe",
     PT: "Europe",
+    PL: "Europe",
+    SE: "Europe",
+    NO: "Europe",
     TR: "Middle East",
     AE: "Middle East",
     SA: "Middle East",
     EG: "Middle East",
+    IL: "Middle East",
     KZ: "Central Asia",
     UZ: "Central Asia",
     KG: "Central Asia",
+    TJ: "Central Asia",
+    TM: "Central Asia",
     CN: "East Asia",
     JP: "East Asia",
     KR: "East Asia",
+    HK: "East Asia",
+    TW: "East Asia",
+    IN: "South Asia",
+    PK: "South Asia",
+    BD: "South Asia",
+    LK: "South Asia",
     MY: "Southeast Asia",
     SG: "Southeast Asia",
     TH: "Southeast Asia",
+    ID: "Southeast Asia",
+    PH: "Southeast Asia",
+    AU: "Oceania",
+    NZ: "Oceania",
+    ZA: "Africa",
+    NG: "Africa",
+    KE: "Africa",
+    MA: "Africa",
   };
   const agg = new Map<string, number>();
   for (const r of rows) {
