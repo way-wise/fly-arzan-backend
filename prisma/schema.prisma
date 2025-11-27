@@ -10,6 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model user {
@@ -201,6 +202,20 @@ model searchEvent {
   @@index([country])
   @@index([utmSource])
   @@index([sessionId])
+}
+
+/// CMS: editable static pages
+model cmsPage {
+  id        String   @id @default(ulid())
+  slug      String   @unique
+  title     String
+  content   Json
+  status    String   @default("published")
+  updatedBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
 }
 
 /// Analytics: records of click-outs to partners

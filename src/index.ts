@@ -14,6 +14,7 @@ import analyticsModule from "@/features/analytics/analyticsModule.js";
 import reportsModule from "@/features/analytics/reportsModule.js";
 import logsModule from "@/features/analytics/logsModule.js";
 import monitoringModule from "@/features/monitoring/monitoringModule.js";
+import cmsModule from "@/features/cms/cmsModule.js";
 
 // Hono init
 const app = new Hono().basePath("/api");
@@ -56,6 +57,7 @@ app.route("/admin/analytics", analyticsModule);
 app.route("/admin/reports", reportsModule);
 app.route("/admin/logs", logsModule);
 app.route("/admin/monitoring", monitoringModule);
+app.route("/admin/cms", cmsModule);
 
 // Not found
 app.notFound((c) => {
