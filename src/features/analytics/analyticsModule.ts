@@ -173,6 +173,14 @@ app.post("/clickout", async (c) => {
     c.req.header("x-forwarded-for")?.split(",")[0] ||
     (c.req.raw as any).socket?.remoteAddress;
 
+  // Context enrichment
+  const cookieHeader = c.req.header("cookie");
+  const sessionId =
+    (validated as any).sessionId ||
+    c.req.header("x-session-id") ||
+    getCookie(cookieHeader, "fa_sid");
+  const referrer = c.req.header("referer") ?? undefined;
+
   const created = await prisma.clickOutEvent.create({
     data: {
       origin: validated.origin,
@@ -183,7 +191,6 @@ app.post("/clickout", async (c) => {
       ipMasked: maskIp(ip),
       // affiliate context
       sessionId: sessionId,
-      requestId: c.get("requestId") as string | undefined,
       referrer: referrer,
       utmSource: (validated as any).utmSource,
       utmMedium: (validated as any).utmMedium,
