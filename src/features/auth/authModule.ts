@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth.js";
+import { auth, requireAuth } from "@/lib/auth.js";
 import { validateInput } from "@/lib/validateInput.js";
 import { signInSchema, signUpSchema } from "@/schema/authSchema.js";
 import { Hono } from "hono";
@@ -6,9 +6,9 @@ import { Hono } from "hono";
 const app = new Hono();
 
 /*
-  @route    GET: /sign-in
+  @route    POST: /sign-in
   @access   public
-  @desc     Sign in
+  @desc     Sign in with email and password
 */
 app.post("/sign-in", async (c) => {
   // Validate form
@@ -18,20 +18,32 @@ app.post("/sign-in", async (c) => {
     data: await c.req.parseBody(),
   });
 
+  // Use better-auth's signInEmail with headers to get cookies
   const response = await auth.api.signInEmail({
     body: {
       email: validatedForm.email,
       password: validatedForm.password,
     },
+    asResponse: true,
+    headers: c.req.raw.headers,
   });
 
-  return c.json(response);
+  // Copy cookies from better-auth response to our response
+  const cookies = response.headers.getSetCookie();
+  for (const cookie of cookies) {
+    c.header("Set-Cookie", cookie, { append: true });
+  }
+
+  // Get the JSON body
+  const data = await response.json();
+
+  return c.json(data);
 });
 
 /*
-  @route    GET: /sign-up
+  @route    POST: /sign-up
   @access   public
-  @desc     Sign Up
+  @desc     Sign Up with email and password
 */
 app.post("/sign-up", async (c) => {
   // Validate form
@@ -47,9 +59,67 @@ app.post("/sign-up", async (c) => {
       email: validatedForm.email,
       password: validatedForm.password,
     },
+    asResponse: true,
+    headers: c.req.raw.headers,
   });
 
-  return c.json(response);
+  // Copy cookies from better-auth response to our response
+  const cookies = response.headers.getSetCookie();
+  for (const cookie of cookies) {
+    c.header("Set-Cookie", cookie, { append: true });
+  }
+
+  // Get the JSON body
+  const data = await response.json();
+
+  return c.json(data);
+});
+
+/*
+  @route    POST: /change-password
+  @access   private
+  @desc     Change user password
+*/
+app.post("/change-password", requireAuth, async (c) => {
+  try {
+    const body = await c.req.json();
+    const { currentPassword, newPassword } = body;
+
+    // Simple validation
+    if (!currentPassword) {
+      return c.json({ message: "Current password is required" }, 400);
+    }
+    if (!newPassword || newPassword.length < 8) {
+      return c.json(
+        { message: "New password must be at least 8 characters" },
+        400
+      );
+    }
+
+    // Use better-auth's changePassword API
+    const response = await auth.api.changePassword({
+      body: {
+        currentPassword,
+        newPassword,
+      },
+      asResponse: true,
+      headers: c.req.raw.headers,
+    });
+
+    if (!response.ok) {
+      const errorData = (await response.json()) as { message?: string };
+      return c.json(
+        { message: errorData.message || "Failed to change password" },
+        400
+      );
+    }
+
+    return c.json({ message: "Password changed successfully" });
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to change password";
+    return c.json({ message: errorMessage }, 500);
+  }
 });
 
 export default app;

@@ -77,11 +77,45 @@ app.get("/metrics", async (c) => {
 
 /*
   @route  GET /metrics/timeseries
-  @desc   Time-series per hour for last 24h: searches and clickouts
+  @desc   Time-series for searches and clickouts
+  @query  range=24h|7d|30d (default 24h), or startDate/endDate
 */
 app.get("/metrics/timeseries", async (c) => {
-  const end = now();
-  const start = subHours(end, 24);
+  const qs = c.req.query();
+  const range = (qs.range || "24h") as "24h" | "7d" | "30d";
+  const end = qs.endDate ? new Date(qs.endDate) : now();
+
+  let start: Date;
+  let bucketHours: number;
+  let bucketCount: number;
+
+  if (qs.startDate) {
+    start = new Date(qs.startDate);
+    const diffMs = end.getTime() - start.getTime();
+    const diffDays = diffMs / (24 * 60 * 60 * 1000);
+    if (diffDays <= 1) {
+      bucketHours = 1;
+      bucketCount = 24;
+    } else if (diffDays <= 7) {
+      bucketHours = 24;
+      bucketCount = Math.ceil(diffDays);
+    } else {
+      bucketHours = 24;
+      bucketCount = Math.min(30, Math.ceil(diffDays));
+    }
+  } else if (range === "7d") {
+    start = subHours(end, 24 * 7);
+    bucketHours = 24;
+    bucketCount = 7;
+  } else if (range === "30d") {
+    start = subHours(end, 24 * 30);
+    bucketHours = 24;
+    bucketCount = 30;
+  } else {
+    start = subHours(end, 24);
+    bucketHours = 1;
+    bucketCount = 24;
+  }
 
   const [searches, clicks] = await Promise.all([
     prisma.searchEvent.findMany({
@@ -95,17 +129,20 @@ app.get("/metrics/timeseries", async (c) => {
   ]);
 
   const buckets: { label: string; searches: number; clickouts: number }[] = [];
-  for (let i = 23; i >= 0; i--) {
-    const t = subHours(end, i);
-    const label = `${t.getHours().toString().padStart(2, "0")}:00`;
+  for (let i = bucketCount - 1; i >= 0; i--) {
+    const t = subHours(end, i * bucketHours);
+    const label =
+      bucketHours === 1
+        ? `${t.getHours().toString().padStart(2, "0")}:00`
+        : `${t.getMonth() + 1}/${t.getDate()}`;
     buckets.push({ label, searches: 0, clickouts: 0 });
   }
 
   const bucketIndex = (d: Date) => {
     const diffMs = end.getTime() - d.getTime();
-    const diffH = Math.floor(diffMs / (60 * 60 * 1000));
-    const idx = 23 - diffH;
-    return idx >= 0 && idx < 24 ? idx : null;
+    const diffBuckets = Math.floor(diffMs / (bucketHours * 60 * 60 * 1000));
+    const idx = bucketCount - 1 - diffBuckets;
+    return idx >= 0 && idx < bucketCount ? idx : null;
   };
 
   for (const s of searches) {
@@ -122,18 +159,19 @@ app.get("/metrics/timeseries", async (c) => {
 
 /*
   @route  GET /metrics/breakdown
-  @desc   Breakdown by device/browser/os for last 24h
-  @query  type=device|browser|os
+  @desc   Breakdown by device/browser/os/geo/travelClass
+  @query  type=device|browser|os|geo|travelClass, startDate, endDate
 */
 app.get("/metrics/breakdown", async (c) => {
-  const type = (c.req.query("type") || "device") as
+  const qs = c.req.query();
+  const type = (qs.type || "device") as
     | "device"
     | "browser"
     | "os"
     | "geo"
     | "travelClass";
-  const end = now();
-  const start = subHours(end, 24);
+  const end = qs.endDate ? new Date(qs.endDate) : now();
+  const start = qs.startDate ? new Date(qs.startDate) : subHours(end, 24);
 
   let byField: "deviceType" | "browser" | "os" | "country" | "travelClass" =
     "deviceType";

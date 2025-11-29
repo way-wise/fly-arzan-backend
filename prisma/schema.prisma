@@ -19,7 +19,7 @@ model user {
   email         String    @unique
   emailVerified Boolean
   image         String?   @db.Text
-  role          String?
+  role          String?   @default("user")
   banned        Boolean?
   banReason     String?   @db.Text
   banExpires    Int?
@@ -33,6 +33,52 @@ model user {
   @@index([emailVerified])
   @@index([role])
   @@index([banned])
+}
+
+// Dynamic Permission System
+model role {
+  id          String   @id @default(ulid())
+  name        String   @unique // e.g., "admin", "moderator", "user"
+  description String?
+  isSystem    Boolean  @default(false) // System roles cannot be deleted
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rolePermissions rolePermission[]
+
+  @@index([name])
+  @@index([isSystem])
+}
+
+model permission {
+  id          String   @id @default(ulid())
+  resource    String // e.g., "user", "cms", "analytics"
+  action      String // e.g., "create", "read", "update", "delete"
+  displayName String // e.g., "Create User"
+  description String?
+  group       String // For UI grouping: "user_management", "content", "analytics"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rolePermissions rolePermission[]
+
+  @@unique([resource, action])
+  @@index([resource])
+  @@index([group])
+}
+
+model rolePermission {
+  id           String   @id @default(ulid())
+  roleId       String
+  permissionId String
+  createdAt    DateTime @default(now())
+
+  role       role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
 }
 
 model session {

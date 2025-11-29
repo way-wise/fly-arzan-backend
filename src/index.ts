@@ -6,6 +6,7 @@ import { cors } from "hono/cors";
 import { errorHandler } from "@/lib/errorHandler.js";
 import { logger } from "hono/logger";
 import { randomUUID } from "crypto";
+import { auth } from "@/lib/auth.js";
 import authModule from "@/features/auth/authModule.js";
 import locationModule from "@/features/locations/locationModule.js";
 import offerModule from "@/features/flight-offers/offerModule.js";
@@ -15,9 +16,17 @@ import reportsModule from "@/features/analytics/reportsModule.js";
 import logsModule from "@/features/analytics/logsModule.js";
 import monitoringModule from "@/features/monitoring/monitoringModule.js";
 import cmsModule from "@/features/cms/cmsModule.js";
+import rolesModule from "@/features/admin/rolesModule.js";
+import usersModule from "@/features/admin/usersModule.js";
+import userModule from "@/features/user/userModule.js";
 
-// Hono init
-const app = new Hono().basePath("/api");
+// Hono init with typed variables for session
+const app = new Hono<{
+  Variables: {
+    user: typeof auth.$Infer.Session.user | null;
+    session: typeof auth.$Infer.Session.session | null;
+  };
+}>().basePath("/api");
 
 // Logger
 app.use(logger());
@@ -25,22 +34,41 @@ app.use(logger());
 // Secure headers
 app.use(secureHeaders());
 
-// Cors config
+// Cors config - must be before routes
 app.use(
   cors({
-    origin: [process.env.APP_CLIENT_URL!, "http://localhost:5173"],
+    origin: [
+      process.env.APP_CLIENT_URL!,
+      "http://localhost:5173",
+      "http://localhost:5174",
+    ],
     credentials: true,
     allowHeaders: ["Content-Type", "Authorization", "x-session-id"],
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    exposeHeaders: ["Content-Length", "Set-Cookie"],
+    maxAge: 600,
   })
 );
 
-// Request ID header for attribution & tracing (no Context typing issues)
+// Request ID header for attribution & tracing
 app.use("*", async (c, next) => {
   try {
     const id = randomUUID();
-    // attach to response headers for observability
     c.res.headers.set("x-request-id", id);
   } catch {}
+  await next();
+});
+
+// Session middleware - makes user/session available in all routes
+app.use("*", async (c, next) => {
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  if (!session) {
+    c.set("user", null);
+    c.set("session", null);
+  } else {
+    c.set("user", session.user);
+    c.set("session", session.session);
+  }
   await next();
 });
 
@@ -49,7 +77,39 @@ app.get("/", (c) => {
   return c.text("The server is healthy and running...!");
 });
 
-app.route("/auth", authModule);
+// Debug endpoint to check current session
+app.get("/me", async (c) => {
+  const user = c.get("user");
+  const session = c.get("session");
+
+  if (!user) {
+    return c.json({ authenticated: false, message: "Not logged in" }, 401);
+  }
+
+  return c.json({
+    authenticated: true,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    },
+    session: {
+      id: session?.id,
+      expiresAt: session?.expiresAt,
+    },
+  });
+});
+
+// Custom auth routes (for form-based sign-in/sign-up with validation)
+// These must come BEFORE the better-auth catch-all handler
+app.route("/auth/custom", authModule);
+
+// Mount better-auth handler for all auth routes (including admin endpoints)
+// This handles: /api/auth/sign-in, /api/auth/sign-up, /api/auth/admin/*, etc.
+app.all("/auth/*", (c) => {
+  return auth.handler(c.req.raw);
+});
 app.route("/geo-currency", geoCurrencyModule);
 app.route("/locations", locationModule);
 app.route("/flight-offers", offerModule);
@@ -58,6 +118,9 @@ app.route("/admin/reports", reportsModule);
 app.route("/admin/logs", logsModule);
 app.route("/admin/monitoring", monitoringModule);
 app.route("/admin/cms", cmsModule);
+app.route("/admin/roles", rolesModule);
+app.route("/admin/users", usersModule);
+app.route("/user", userModule);
 
 // Not found
 app.notFound((c) => {
