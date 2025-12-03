@@ -48,14 +48,17 @@ function parseCSV(content: string): string[][] {
 async function main() {
   console.log("Starting data import...");
 
-  await prisma.airline.deleteMany({});
-  await prisma.airport.deleteMany({});
-  await prisma.city.deleteMany({});
-  await prisma.region.deleteMany({});
-  await prisma.country.deleteMany({});
+  // Countries and Regions already imported - skip deletion and import
+  // await prisma.airline.deleteMany({});
+  // await prisma.airport.deleteMany({});
+  // await prisma.city.deleteMany({});
+  // await prisma.region.deleteMany({});
+  // await prisma.country.deleteMany({});
 
-  await importCountries();
-  await importRegions();
+  // await importCountries();
+  // await importRegions();
+
+  // Only run remaining imports
   await importCitiesAndAirports();
   await importAirlines();
 
