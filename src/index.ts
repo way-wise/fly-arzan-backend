@@ -110,6 +110,7 @@ app.route("/auth/custom", authModule);
 app.all("/auth/*", (c) => {
   return auth.handler(c.req.raw);
 });
+app.route("/cms", cmsModule); // Public CMS routes (uses /public/:slug)
 app.route("/geo-currency", geoCurrencyModule);
 app.route("/locations", locationModule);
 app.route("/flight-offers", offerModule);

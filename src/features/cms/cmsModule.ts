@@ -3,6 +3,33 @@ import { prisma } from "@/lib/prisma.js";
 
 const app = new Hono();
 
+// ============================================
+// PUBLIC ENDPOINTS (no auth required)
+// ============================================
+
+// Get published page by slug (PUBLIC - for frontend pages)
+app.get("/public/:slug", async (c) => {
+  const slug = c.req.param("slug");
+  const page = await prisma.cmsPage.findFirst({
+    where: {
+      slug,
+      status: "published",
+    },
+    select: {
+      slug: true,
+      title: true,
+      content: true,
+      updatedAt: true,
+    },
+  });
+  if (!page) return c.json({ message: "Page not found" }, 404);
+  return c.json(page);
+});
+
+// ============================================
+// ADMIN ENDPOINTS (auth required via /admin/cms mount)
+// ============================================
+
 // List all CMS pages (slugs and titles)
 app.get("/pages", async (c) => {
   const pages = await prisma.cmsPage.findMany({
