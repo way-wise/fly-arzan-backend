@@ -4,41 +4,59 @@ import { prisma } from "../src/lib/prisma";
 async function main(total: number) {
   await prisma.$transaction(
     async (tx) => {
+      // Define seed user email
+      const seedUserEmail = "admin@flyarzan.com";
+
+      // Delete existing seed user's sessions, accounts, and user record
+      const existingUser = await tx.user.findUnique({
+        where: { email: seedUserEmail },
+        select: { id: true },
+      });
+
+      if (existingUser) {
+        console.log("🗑️ Deleting existing seed user data...");
+        // Delete sessions first (foreign key constraint)
+        await tx.session.deleteMany({
+          where: { userId: existingUser.id },
+        });
+        // Delete accounts (foreign key constraint)
+        await tx.account.deleteMany({
+          where: { userId: existingUser.id },
+        });
+        // Delete user
+        await tx.user.delete({
+          where: { id: existingUser.id },
+        });
+        console.log("✅ Existing seed user deleted");
+      }
+
       // Create super admin
-      const users = [
-        {
+      const password = await hashPassword("12345678");
+
+      const newUser = await tx.user.create({
+        data: {
           name: "Zabet",
-          email: "admin@flyarzan.com",
+          email: seedUserEmail,
           emailVerified: true,
           role: "super",
           createdAt: new Date(),
           updatedAt: new Date(),
         },
-      ];
-
-      await tx.user.createMany({
-        data: users,
-        skipDuplicates: true,
       });
 
-      // Get created user IDs
-      const userIds = await tx.user.findMany({
-        select: { id: true },
-        take: 1,
-      });
-
-      // Create accounts for users with same password
-      const password = await hashPassword("12345678");
-      await tx.account.createMany({
-        data: userIds.map(({ id }) => ({
-          userId: id,
-          accountId: id,
+      // Create account for user
+      await tx.account.create({
+        data: {
+          userId: newUser.id,
+          accountId: newUser.id,
           providerId: "credential",
           password,
           createdAt: new Date(),
           updatedAt: new Date(),
-        })),
+        },
       });
+
+      console.log("✅ Seed user created: admin@flyarzan.com / 12345678");
 
       // ============================================
       // CMS SEED DATA - Matching static page content

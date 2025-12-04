@@ -32,7 +32,8 @@ app.get("/currencies", async (c) => {
 */
 app.get("/", async (c) => {
   try {
-    const forwardedForIp = c.req.header("X-Forwarded-For");
+    // Get IP from headers or use 'check' for auto-detect (works for local dev)
+    const forwardedForIp = c.req.header("X-Forwarded-For") || "check";
 
     // Location information from IP Address
     const API_KEY = process.env.GEO_LOCATION_API_KEY;

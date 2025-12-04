@@ -28,14 +28,19 @@ app.post("/sign-in", async (c) => {
     headers: c.req.raw.headers,
   });
 
-  // Copy cookies from better-auth response to our response
+  // Get the JSON body
+  const data = await response.json();
+
+  // If better-auth returned an error, pass it through with proper status
+  if (!response.ok) {
+    return c.json(data, response.status as 400 | 401 | 403 | 404 | 500);
+  }
+
+  // Copy cookies from better-auth response to our response (only on success)
   const cookies = response.headers.getSetCookie();
   for (const cookie of cookies) {
     c.header("Set-Cookie", cookie, { append: true });
   }
-
-  // Get the JSON body
-  const data = await response.json();
 
   return c.json(data);
 });
