@@ -115,6 +115,18 @@ model account {
   @@index([userId])
 }
 
+// Required by better-auth for OAuth state verification
+model verification {
+  id         String   @id @default(ulid())
+  identifier String
+  value      String   @db.Text
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
 model country {
   id               Int       @id @default(autoincrement())
   iso              String    @unique

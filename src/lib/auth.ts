@@ -1,9 +1,11 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { admin } from "better-auth/plugins";
+import { APIError } from "better-auth/api";
 import { prisma } from "./prisma.js";
 import type { Context } from "hono";
 import { ac, roles } from "./permissions.js";
+import { sendPasswordResetEmail } from "./email.js";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -11,6 +13,18 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
+    // Password reset configuration
+    sendResetPassword: async ({ user, url, token }, request) => {
+      // Use void to not await - prevents timing attacks
+      void sendPasswordResetEmail(user.email, token, url);
+    },
+  },
+  // Social OAuth providers
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+    },
   },
   trustedOrigins: [
     process.env.APP_CLIENT_URL!,
@@ -23,6 +37,21 @@ export const auth = betterAuth({
     defaultCookieAttributes: {
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
+    },
+  },
+  user: {
+    // Enable account deletion
+    deleteUser: {
+      enabled: true,
+      // Prevent admin accounts from being deleted
+      beforeDelete: async (user) => {
+        const userWithRole = user as typeof user & { role?: string };
+        if (userWithRole.role === "super" || userWithRole.role === "admin") {
+          throw new APIError("BAD_REQUEST", {
+            message: "Admin accounts cannot be deleted. Please contact support.",
+          });
+        }
+      },
     },
   },
   plugins: [

@@ -18,11 +18,16 @@ app.post("/sign-in", async (c) => {
     data: await c.req.parseBody(),
   });
 
+  // Parse rememberMe from form data (default to true per better-auth)
+  const formData = await c.req.parseBody();
+  const rememberMe = formData.rememberMe !== "false"; // Default true unless explicitly "false"
+
   // Use better-auth's signInEmail with headers to get cookies
   const response = await auth.api.signInEmail({
     body: {
       email: validatedForm.email,
       password: validatedForm.password,
+      rememberMe, // Pass rememberMe option to better-auth
     },
     asResponse: true,
     headers: c.req.raw.headers,
