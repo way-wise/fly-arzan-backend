@@ -100,4 +100,65 @@ app.put("/profile", requireAuth, async (c) => {
   return c.json(updatedUser);
 });
 
+/**
+ * @route   GET /api/user/notification-preferences
+ * @desc    Get current user notification preferences
+ * @access  Private
+ */
+app.get("/notification-preferences", requireAuth, async (c) => {
+  const user = c.get("user");
+
+  if (!user) {
+    return c.json({ message: "User not found" }, 404);
+  }
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: {
+      wantsNotifications: true,
+      wantsNewsletter: true,
+      communicationPreferencesUpdatedAt: true,
+    },
+  });
+
+  if (!dbUser) {
+    return c.json({ message: "User not found" }, 404);
+  }
+
+  return c.json(dbUser);
+});
+
+/**
+ * @route   PUT /api/user/notification-preferences
+ * @desc    Update current user notification preferences
+ * @access  Private
+ */
+app.put("/notification-preferences", requireAuth, async (c) => {
+  const user = c.get("user");
+
+  if (!user) {
+    return c.json({ message: "User not found" }, 404);
+  }
+
+  const body = await c.req.json();
+  const { wantsNotifications, wantsNewsletter } = body;
+
+  // Update user preferences
+  const updatedUser = await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      ...(typeof wantsNotifications === "boolean" && { wantsNotifications }),
+      ...(typeof wantsNewsletter === "boolean" && { wantsNewsletter }),
+      communicationPreferencesUpdatedAt: new Date(),
+    },
+    select: {
+      wantsNotifications: true,
+      wantsNewsletter: true,
+      communicationPreferencesUpdatedAt: true,
+    },
+  });
+
+  return c.json(updatedUser);
+});
+
 export default app;

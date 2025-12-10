@@ -18,7 +18,10 @@ import monitoringModule from "@/features/monitoring/monitoringModule.js";
 import cmsModule from "@/features/cms/cmsModule.js";
 import rolesModule from "@/features/admin/rolesModule.js";
 import usersModule from "@/features/admin/usersModule.js";
+import customersModule from "@/features/admin/customersModule.js";
 import userModule from "@/features/user/userModule.js";
+import notificationModule from "@/features/notifications/notificationModule.js";
+import emailModule from "@/features/email/emailModule.js";
 
 // Hono init with typed variables for session
 const app = new Hono<{
@@ -55,7 +58,7 @@ app.use("*", async (c, next) => {
   try {
     const id = randomUUID();
     c.res.headers.set("x-request-id", id);
-  } catch {}
+  } catch { }
   await next();
 });
 
@@ -121,7 +124,10 @@ app.route("/admin/monitoring", monitoringModule);
 app.route("/admin/cms", cmsModule);
 app.route("/admin/roles", rolesModule);
 app.route("/admin/users", usersModule);
+app.route("/admin/customers", customersModule);
+app.route("/admin/email", emailModule);
 app.route("/user", userModule);
+app.route("/notifications", notificationModule);
 
 // Not found
 app.notFound((c) => {

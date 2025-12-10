@@ -28,11 +28,64 @@ model user {
   session       session[]
   account       account[]
 
+  // Customer communication preferences
+  wantsNotifications                Boolean   @default(true)
+  wantsNewsletter                   Boolean   @default(false)
+  communicationPreferencesUpdatedAt DateTime?
+
+  // Relations
+  notifications notification[]
+
   @@index([name])
   @@index([email])
   @@index([emailVerified])
   @@index([role])
   @@index([banned])
+}
+
+// In-app notifications for users
+model notification {
+  id        String   @id @default(ulid())
+  userId    String
+  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String   @db.Text
+  type      String   @default("info") // info, warning, promo, system
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+}
+
+// Email campaigns sent by admin
+model emailCampaign {
+  id             String                   @id @default(ulid())
+  subject        String
+  content        String                   @db.Text
+  sentById       String // admin user id who sent it
+  recipientCount Int
+  status         String                   @default("sent") // draft, sent, failed
+  createdAt      DateTime                 @default(now())
+  recipients     emailCampaignRecipient[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Track which users received which email campaign
+model emailCampaignRecipient {
+  id         String        @id @default(ulid())
+  campaignId String
+  campaign   emailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  userId     String
+  email      String
+  status     String        @default("sent") // sent, delivered, opened, bounced
+  sentAt     DateTime      @default(now())
+
+  @@index([campaignId])
+  @@index([userId])
 }
 
 // Dynamic Permission System

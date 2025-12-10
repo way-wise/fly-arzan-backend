@@ -15,14 +15,20 @@ app.get("/", requireAdmin, async (c) => {
   const searchValue = c.req.query("searchValue") || "";
   const searchField = c.req.query("searchField") || "email";
 
+  // Exclude super admin from the list
+  const baseWhere = {
+    role: { not: "super" },
+  };
+
   const where = searchValue
     ? {
-        [searchField]: {
-          contains: searchValue,
-          mode: "insensitive" as const,
-        },
-      }
-    : {};
+      ...baseWhere,
+      [searchField]: {
+        contains: searchValue,
+        mode: "insensitive" as const,
+      },
+    }
+    : baseWhere;
 
   const [users, total] = await Promise.all([
     prisma.user.findMany({
