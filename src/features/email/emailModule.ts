@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { prisma } from "@/lib/prisma.js";
 import { requireAdmin, auth } from "@/lib/auth.js";
+import { sendEmail, sendBulkEmails } from "@/lib/mailer.js";
 
 // Define app with proper types
 const app = new Hono<{
@@ -63,18 +64,31 @@ app.post("/send", requireAdmin, async (c) => {
         },
     });
 
-    // TODO: Integrate with actual email service (SendGrid, Resend, etc.)
-    // For now, we just log and store the campaign
-    console.log(`[Email] Sending to ${targetUser.email}: ${subject}`);
+    // Send actual email via Nodemailer
+    const emailResult = await sendEmail({
+        to: targetUser.email,
+        subject,
+        html: content,
+    });
+
+    // Update recipient status based on email result
+    if (!emailResult.success) {
+        await prisma.emailCampaignRecipient.updateMany({
+            where: { campaignId: campaign.id, userId: targetUser.id },
+            data: { status: "failed" },
+        });
+    }
 
     return c.json({
-        success: true,
+        success: emailResult.success,
         campaign,
         recipient: {
             id: targetUser.id,
             email: targetUser.email,
             name: targetUser.name,
         },
+        emailSent: emailResult.success,
+        emailError: emailResult.error,
     });
 });
 
@@ -137,8 +151,22 @@ app.post("/send-bulk", requireAdmin, async (c) => {
         },
     });
 
-    // TODO: Integrate with actual email service
-    console.log(`[Email] Bulk sending to ${eligibleUsers.length} users: ${subject}`);
+    // Send actual emails via Nodemailer
+    const emailResults = await sendBulkEmails({
+        recipients: eligibleUsers.map((user) => ({ email: user.email, userId: user.id })),
+        subject,
+        html: content,
+    });
+
+    // Update failed recipients in database
+    for (const result of emailResults.results) {
+        if (!result.success) {
+            await prisma.emailCampaignRecipient.updateMany({
+                where: { campaignId: campaign.id, userId: result.userId },
+                data: { status: "failed" },
+            });
+        }
+    }
 
     return c.json({
         success: true,
@@ -147,7 +175,8 @@ app.post("/send-bulk", requireAdmin, async (c) => {
             subject: campaign.subject,
             recipientCount: campaign.recipientCount,
         },
-        sent: eligibleUsers.length,
+        sent: emailResults.sent,
+        failed: emailResults.failed,
         blocked: userIds.length - eligibleUsers.length,
         recipients: eligibleUsers,
     });
@@ -201,8 +230,22 @@ app.post("/send-to-all-subscribers", requireAdmin, async (c) => {
         },
     });
 
-    // TODO: Integrate with actual email service
-    console.log(`[Email] Sending to all ${subscribers.length} subscribers: ${subject}`);
+    // Send actual emails via Nodemailer
+    const emailResults = await sendBulkEmails({
+        recipients: subscribers.map((user) => ({ email: user.email, userId: user.id })),
+        subject,
+        html: content,
+    });
+
+    // Update failed recipients in database
+    for (const result of emailResults.results) {
+        if (!result.success) {
+            await prisma.emailCampaignRecipient.updateMany({
+                where: { campaignId: campaign.id, userId: result.userId },
+                data: { status: "failed" },
+            });
+        }
+    }
 
     return c.json({
         success: true,
@@ -211,7 +254,8 @@ app.post("/send-to-all-subscribers", requireAdmin, async (c) => {
             subject: campaign.subject,
             recipientCount: campaign.recipientCount,
         },
-        sent: subscribers.length,
+        sent: emailResults.sent,
+        failed: emailResults.failed,
     });
 });
 

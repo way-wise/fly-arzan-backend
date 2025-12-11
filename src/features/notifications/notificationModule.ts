@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { prisma } from "@/lib/prisma.js";
 import { requireAuth, requireAdmin, auth } from "@/lib/auth.js";
+import { sendToUser, sendToUsers } from "@/lib/websocket.js";
 
 // Define app with proper types
 const app = new Hono<{
@@ -193,6 +194,12 @@ app.post("/admin/send", requireAdmin, async (c) => {
         },
     });
 
+    // Send real-time notification via WebSocket
+    sendToUser(userId, {
+        type: "notification",
+        payload: notification,
+    });
+
     return c.json({ success: true, notification });
 });
 
@@ -243,6 +250,12 @@ app.post("/admin/send-bulk", requireAdmin, async (c) => {
             message,
             type,
         })),
+    });
+
+    // Send real-time notifications via WebSocket (fanout)
+    sendToUsers(eligibleUserIds, {
+        type: "notification",
+        payload: { title, message, type },
     });
 
     return c.json({

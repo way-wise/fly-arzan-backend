@@ -22,6 +22,7 @@ import customersModule from "@/features/admin/customersModule.js";
 import userModule from "@/features/user/userModule.js";
 import notificationModule from "@/features/notifications/notificationModule.js";
 import emailModule from "@/features/email/emailModule.js";
+import { initWebSocket } from "@/lib/websocket.js";
 
 // Hono init with typed variables for session
 const app = new Hono<{
@@ -152,6 +153,9 @@ const server = serve(
     console.log(`Server is running on http://localhost:${info.port}`);
   }
 );
+
+// Initialize WebSocket server
+initWebSocket(server);
 
 // graceful shutdown
 process.on("SIGINT", () => {
