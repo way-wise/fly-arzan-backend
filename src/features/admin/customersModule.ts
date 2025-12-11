@@ -60,6 +60,46 @@ app.get("/", requireAdmin, async (c) => {
 });
 
 /**
+ * @route GET /api/admin/customers/stats/overview
+ * @desc Get customer statistics overview
+ * @access Admin only
+ * NOTE: This route MUST be defined before /:customerId to avoid route conflicts
+ */
+app.get("/stats/overview", requireAdmin, async (c) => {
+    const [
+        totalCustomers,
+        verifiedCustomers,
+        bannedCustomers,
+        wantsNotifications,
+        wantsNewsletter,
+        newThisMonth,
+    ] = await Promise.all([
+        prisma.user.count({ where: { role: "user" } }),
+        prisma.user.count({ where: { role: "user", emailVerified: true } }),
+        prisma.user.count({ where: { role: "user", banned: true } }),
+        prisma.user.count({ where: { role: "user", wantsNotifications: true } }),
+        prisma.user.count({ where: { role: "user", wantsNewsletter: true } }),
+        prisma.user.count({
+            where: {
+                role: "user",
+                createdAt: {
+                    gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+                },
+            },
+        }),
+    ]);
+
+    return c.json({
+        totalCustomers,
+        verifiedCustomers,
+        bannedCustomers,
+        wantsNotifications,
+        wantsNewsletter,
+        newThisMonth,
+    });
+});
+
+/**
  * @route GET /api/admin/customers/:customerId
  * @desc Get a single customer by ID
  * @access Admin only
@@ -225,45 +265,6 @@ app.delete("/:customerId", requireAdmin, async (c) => {
     });
 
     return c.json({ success: true });
-});
-
-/**
- * @route GET /api/admin/customers/stats/overview
- * @desc Get customer statistics overview
- * @access Admin only
- */
-app.get("/stats/overview", requireAdmin, async (c) => {
-    const [
-        totalCustomers,
-        verifiedCustomers,
-        bannedCustomers,
-        wantsNotifications,
-        wantsNewsletter,
-        newThisMonth,
-    ] = await Promise.all([
-        prisma.user.count({ where: { role: "user" } }),
-        prisma.user.count({ where: { role: "user", emailVerified: true } }),
-        prisma.user.count({ where: { role: "user", banned: true } }),
-        prisma.user.count({ where: { role: "user", wantsNotifications: true } }),
-        prisma.user.count({ where: { role: "user", wantsNewsletter: true } }),
-        prisma.user.count({
-            where: {
-                role: "user",
-                createdAt: {
-                    gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-                },
-            },
-        }),
-    ]);
-
-    return c.json({
-        totalCustomers,
-        verifiedCustomers,
-        bannedCustomers,
-        wantsNotifications,
-        wantsNewsletter,
-        newThisMonth,
-    });
 });
 
 export default app;

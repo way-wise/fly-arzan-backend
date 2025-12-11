@@ -280,16 +280,22 @@ app.get("/stats", requireAdmin, async (c) => {
         totalCampaigns,
         totalRecipients,
         subscriberCount,
+        totalCustomers,
     ] = await Promise.all([
         prisma.emailCampaign.count(),
         prisma.emailCampaignRecipient.count(),
         prisma.user.count({ where: { role: "user", wantsNewsletter: true } }),
+        prisma.user.count({ where: { role: "user" } }),
     ]);
+
+    // Unsubscribed = total customers - subscribers
+    const unsubscribedCount = totalCustomers - subscriberCount;
 
     return c.json({
         totalCampaigns,
         totalRecipients,
         subscriberCount,
+        unsubscribedCount,
     });
 });
 
