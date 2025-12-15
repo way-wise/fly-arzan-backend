@@ -686,6 +686,65 @@ async function main(total: number) {
           "Visa requirements may change without notice. Always check with the official embassy or consulate of your destination country before traveling. Fly Arzan is not responsible for any visa-related issues. We recommend applying for visas well in advance of your travel dates.",
       };
 
+      // Terms and Conditions content
+      const termsConditionsContent = {
+        lastUpdated: "December 15, 2024",
+        introduction:
+          "Welcome to Fly Arzan. By accessing and using our website and services, you agree to be bound by these Terms and Conditions. Please read them carefully before using our services.",
+        sections: [
+          {
+            heading: "Acceptance of Terms",
+            content:
+              "By accessing or using Fly Arzan's services, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions. If you do not agree with any part of these terms, you must not use our services.",
+            bulletPoints: [],
+          },
+          {
+            heading: "Service Description",
+            content:
+              "Fly Arzan is a flight comparison and booking platform that helps users find and compare flight prices from various airlines and travel partners. We act as an intermediary and do not operate flights ourselves.",
+            bulletPoints: [
+              "We provide flight search and comparison services",
+              "Bookings are completed through our partner websites",
+              "Prices and availability are subject to change",
+            ],
+          },
+          {
+            heading: "User Responsibilities",
+            content:
+              "As a user of our services, you are responsible for ensuring the accuracy of all information you provide and for complying with all applicable laws and regulations.",
+            bulletPoints: [
+              "Provide accurate personal and travel information",
+              "Ensure valid travel documents (passport, visa, etc.)",
+              "Review booking details before confirmation",
+              "Comply with airline and destination country requirements",
+            ],
+          },
+          {
+            heading: "Booking and Payments",
+            content:
+              "All bookings made through Fly Arzan are subject to the terms and conditions of the respective airline or travel partner. Payment processing is handled by our partners.",
+            bulletPoints: [
+              "Prices are displayed in your selected currency",
+              "Final prices are confirmed at the time of booking",
+              "Payment is processed by our travel partners",
+              "Cancellation and refund policies vary by airline",
+            ],
+          },
+          {
+            heading: "Limitation of Liability",
+            content:
+              "Fly Arzan shall not be liable for any direct, indirect, incidental, or consequential damages arising from the use of our services or any errors in flight information displayed on our platform.",
+            bulletPoints: [],
+          },
+          {
+            heading: "Changes to Terms",
+            content:
+              "We reserve the right to modify these Terms and Conditions at any time. Changes will be effective immediately upon posting on our website. Your continued use of our services constitutes acceptance of any changes.",
+            bulletPoints: [],
+          },
+        ],
+      };
+
       // Seed all CMS pages
       const cmsDefaults: Array<{ slug: string; title: string; content: any }> =
         [
@@ -695,6 +754,11 @@ async function main(total: number) {
             slug: "privacy_policy",
             title: "Privacy Policy",
             content: privacyPolicyContent,
+          },
+          {
+            slug: "terms_and_conditions",
+            title: "Terms & Conditions",
+            content: termsConditionsContent,
           },
           { slug: "contact", title: "Contact", content: contactContent },
           {

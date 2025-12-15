@@ -22,6 +22,7 @@ import customersModule from "@/features/admin/customersModule.js";
 import userModule from "@/features/user/userModule.js";
 import notificationModule from "@/features/notifications/notificationModule.js";
 import emailModule from "@/features/email/emailModule.js";
+import airportModule from "@/features/airports/airportModule.js";
 import { initWebSocket } from "@/lib/websocket.js";
 
 // Hono init with typed variables for session
@@ -129,6 +130,7 @@ app.route("/admin/customers", customersModule);
 app.route("/admin/email", emailModule);
 app.route("/user", userModule);
 app.route("/notifications", notificationModule);
+app.route("/airports", airportModule);
 
 // Not found
 app.notFound((c) => {

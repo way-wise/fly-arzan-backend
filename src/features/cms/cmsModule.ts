@@ -81,6 +81,11 @@ app.post("/seed-defaults", async (c) => {
       content: { blocks: [] },
     },
     {
+      slug: "terms_and_conditions",
+      title: "Terms & Conditions",
+      content: { blocks: [] },
+    },
+    {
       slug: "contact",
       title: "Contact",
       content: { address: {}, channels: [] },
