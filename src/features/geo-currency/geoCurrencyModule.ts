@@ -25,31 +25,48 @@ function haversineDistance(
   return R * c;
 }
 
+// In-memory cache for airports (valid for 24 hours - airports don't change often)
+let airportsCache: { data: Awaited<ReturnType<typeof fetchAllAirports>>; timestamp: number } | null = null;
+const AIRPORTS_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
+async function fetchAllAirports() {
+  return prisma.airport.findMany({
+    where: {
+      latitudeDeg: { not: null },
+      longitudeDeg: { not: null },
+      iataCode: { not: null },
+      type: { in: ["large_airport", "medium_airport"] },
+    },
+    select: {
+      name: true,
+      iataCode: true,
+      latitudeDeg: true,
+      longitudeDeg: true,
+      city: {
+        select: {
+          name: true,
+          country: { select: { name: true, iso: true } },
+        },
+      },
+    },
+  });
+}
+
+async function getCachedAirports() {
+  if (airportsCache && Date.now() - airportsCache.timestamp < AIRPORTS_CACHE_DURATION) {
+    return airportsCache.data;
+  }
+  const data = await fetchAllAirports();
+  airportsCache = { data, timestamp: Date.now() };
+  return data;
+}
+
 /**
- * Find nearest airport to given coordinates
+ * Find nearest airport to given coordinates (uses cached airports)
  */
 async function findNearestAirport(lat: number, lon: number) {
   try {
-    const airports = await prisma.airport.findMany({
-      where: {
-        latitudeDeg: { not: null },
-        longitudeDeg: { not: null },
-        iataCode: { not: null },
-        type: { in: ["large_airport", "medium_airport"] },
-      },
-      select: {
-        name: true,
-        iataCode: true,
-        latitudeDeg: true,
-        longitudeDeg: true,
-        city: {
-          select: {
-            name: true,
-            country: { select: { name: true, iso: true } },
-          },
-        },
-      },
-    });
+    const airports = await getCachedAirports();
 
     let nearest: (typeof airports)[0] | null = null;
     let minDistance = Infinity;
@@ -106,6 +123,22 @@ app.get("/currencies", async (c) => {
   }
 });
 
+// In-memory cache for exchange rates (valid for 1 hour)
+let exchangeRateCache: { data: unknown; timestamp: number } | null = null;
+const EXCHANGE_RATE_CACHE_DURATION = 60 * 60 * 1000; // 1 hour
+
+async function getCachedExchangeRates(apiKey: string) {
+  if (exchangeRateCache && Date.now() - exchangeRateCache.timestamp < EXCHANGE_RATE_CACHE_DURATION) {
+    return exchangeRateCache.data;
+  }
+  const exchangeUrl = `https://openexchangerates.org/api/latest.json?app_id=${apiKey}`;
+  const response = await fetch(exchangeUrl);
+  if (!response.ok) return null;
+  const data = await response.json();
+  exchangeRateCache = { data, timestamp: Date.now() };
+  return data;
+}
+
 /*
   @route    GET: /geo-currency
   @access   public
@@ -118,33 +151,26 @@ app.get("/", async (c) => {
 
     // Location information from IP Address
     const API_KEY = process.env.GEO_LOCATION_API_KEY;
-    const url = `https://api.ipapi.com/api/${forwardedForIp}?access_key=${API_KEY}`;
+    const geoUrl = `https://api.ipapi.com/api/${forwardedForIp}?access_key=${API_KEY}`;
 
-    // GET Latest Exchange Rate Based on US Dollar
     const OPEN_EXCHANGE_API_KEY = process.env.OPEN_EXCHANGE_API_KEY;
-    const exchangeUrl = `https://openexchangerates.org/api/latest.json?app_id=${OPEN_EXCHANGE_API_KEY}`;
 
-    // Fetch geolocation first to get coordinates
-    const geoResponse = await fetch(url);
+    // Fetch geo and exchange rates in parallel (exchange rates are cached)
+    const [geoResponse, exchangeData] = await Promise.all([
+      fetch(geoUrl),
+      getCachedExchangeRates(OPEN_EXCHANGE_API_KEY || ""),
+    ]);
+
     if (!geoResponse.ok) {
       console.error("Geolocation API error:", await geoResponse.text());
       return c.json({ error: "Failed to fetch geolocation data" }, 500);
     }
     const geoData = await geoResponse.json();
 
-    // Fetch exchange rates and nearest airport in parallel for speed
-    const [exchangeResponse, nearestAirport] = await Promise.all([
-      fetch(exchangeUrl),
-      geoData.latitude && geoData.longitude
-        ? findNearestAirport(geoData.latitude, geoData.longitude)
-        : Promise.resolve(null),
-    ]);
-
-    if (!exchangeResponse.ok) {
-      console.error("Exchange rate API error:", await exchangeResponse.text());
-      return c.json({ error: "Failed to fetch exchange rate data" }, 500);
-    }
-    const exchangeData = await exchangeResponse.json();
+    // Fetch nearest airport (don't block response if it fails)
+    const nearestAirport = geoData.latitude && geoData.longitude
+      ? await findNearestAirport(geoData.latitude, geoData.longitude)
+      : null;
 
     return c.json({
       countryCode: geoData.country_code,
@@ -157,10 +183,9 @@ app.get("/", async (c) => {
       callingCode: geoData.location?.calling_code,
       timeZone: geoData.time_zone,
       currency: geoData.currency,
-      exchangeRate: {
-        base: exchangeData.base,
-        rates: exchangeData.rates,
-      },
+      exchangeRate: exchangeData
+        ? { base: (exchangeData as { base: string; rates: Record<string, number> }).base, rates: (exchangeData as { base: string; rates: Record<string, number> }).rates }
+        : { base: "USD", rates: { USD: 1 } },
       nearestAirport,
     });
   } catch (error) {
