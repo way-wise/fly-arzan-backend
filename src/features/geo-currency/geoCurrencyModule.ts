@@ -1,6 +1,87 @@
 import { Hono } from "hono";
+import { prisma } from "@/lib/prisma.js";
 
 const app = new Hono();
+
+/**
+ * Calculate distance between two coordinates using Haversine formula
+ */
+function haversineDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/**
+ * Find nearest airport to given coordinates
+ */
+async function findNearestAirport(lat: number, lon: number) {
+  try {
+    const airports = await prisma.airport.findMany({
+      where: {
+        latitudeDeg: { not: null },
+        longitudeDeg: { not: null },
+        iataCode: { not: null },
+        type: { in: ["large_airport", "medium_airport"] },
+      },
+      select: {
+        name: true,
+        iataCode: true,
+        latitudeDeg: true,
+        longitudeDeg: true,
+        city: {
+          select: {
+            name: true,
+            country: { select: { name: true, iso: true } },
+          },
+        },
+      },
+    });
+
+    let nearest: (typeof airports)[0] | null = null;
+    let minDistance = Infinity;
+
+    for (const airport of airports) {
+      if (airport.latitudeDeg && airport.longitudeDeg) {
+        const distance = haversineDistance(
+          lat,
+          lon,
+          airport.latitudeDeg,
+          airport.longitudeDeg
+        );
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearest = airport;
+        }
+      }
+    }
+
+    if (!nearest) return null;
+
+    return {
+      iataCode: nearest.iataCode,
+      name: nearest.name,
+      city: nearest.city?.name,
+      country: nearest.city?.country?.name,
+      countryCode: nearest.city?.country?.iso,
+    };
+  } catch {
+    return null;
+  }
+}
 
 /*
   @route    GET: /geo-currency/currencies
@@ -43,7 +124,7 @@ app.get("/", async (c) => {
     const OPEN_EXCHANGE_API_KEY = process.env.OPEN_EXCHANGE_API_KEY;
     const exchangeUrl = `https://openexchangerates.org/api/latest.json?app_id=${OPEN_EXCHANGE_API_KEY}`;
 
-    // Fetch geolocation first to get currency code
+    // Fetch geolocation first to get coordinates
     const geoResponse = await fetch(url);
     if (!geoResponse.ok) {
       console.error("Geolocation API error:", await geoResponse.text());
@@ -51,8 +132,14 @@ app.get("/", async (c) => {
     }
     const geoData = await geoResponse.json();
 
-    // Then fetch exchange rates
-    const exchangeResponse = await fetch(exchangeUrl);
+    // Fetch exchange rates and nearest airport in parallel for speed
+    const [exchangeResponse, nearestAirport] = await Promise.all([
+      fetch(exchangeUrl),
+      geoData.latitude && geoData.longitude
+        ? findNearestAirport(geoData.latitude, geoData.longitude)
+        : Promise.resolve(null),
+    ]);
+
     if (!exchangeResponse.ok) {
       console.error("Exchange rate API error:", await exchangeResponse.text());
       return c.json({ error: "Failed to fetch exchange rate data" }, 500);
@@ -62,6 +149,9 @@ app.get("/", async (c) => {
     return c.json({
       countryCode: geoData.country_code,
       countryName: geoData.country_name,
+      city: geoData.city,
+      latitude: geoData.latitude,
+      longitude: geoData.longitude,
       languages: geoData.location?.languages || [],
       countryFlag: geoData.location?.country_flag,
       callingCode: geoData.location?.calling_code,
@@ -71,6 +161,7 @@ app.get("/", async (c) => {
         base: exchangeData.base,
         rates: exchangeData.rates,
       },
+      nearestAirport,
     });
   } catch (error) {
     console.error("Error in geo-currency endpoint:", error);
