@@ -111,8 +111,9 @@ export async function sendBulkEmails({
             });
         }
 
-        // Small delay between emails to avoid rate limiting
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        // Delay between emails to respect Resend rate limits (2 req/sec = 500ms minimum)
+        // Using 600ms to be safe and avoid 429 errors
+        await new Promise((resolve) => setTimeout(resolve, 600));
     }
 
     return { sent, failed, results };
