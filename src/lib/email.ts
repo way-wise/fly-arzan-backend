@@ -1,38 +1,34 @@
 import nodemailer from "nodemailer";
 
 // Create transporter - configure based on your email service
+const port = parseInt(process.env.SMTP_PORT || "587");
 const transporter = nodemailer.createTransport({
-    // For Gmail
-    service: "gmail",
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS, // Use App Password for Gmail
-    },
-    // For custom SMTP:
-    // host: process.env.SMTP_HOST,
-    // port: parseInt(process.env.SMTP_PORT || "587"),
-    // secure: process.env.SMTP_SECURE === "true",
-    // auth: {
-    //   user: process.env.SMTP_USER,
-    //   pass: process.env.SMTP_PASS,
-    // },
+  // For custom SMTP:
+  host: process.env.SMTP_HOST,
+  port: port,
+  secure: port === 465 ? true : (port === 587 ? false : (process.env.SMTP_SECURE === "true")),
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
 });
 
 const APP_NAME = "Fly Arzan";
 const APP_URL = process.env.APP_CLIENT_URL || "http://localhost:5173";
+const defaultFrom = process.env.SMTP_FROM || `${APP_NAME} <onboarding@resend.dev>`;
 
 export async function sendPasswordResetEmail(
-    to: string,
-    token: string,
-    url: string
+  to: string,
+  token: string,
+  url: string
 ) {
-    try {
-        await transporter.sendMail({
-            from: `"${APP_NAME}" <${process.env.SMTP_USER}>`,
-            to,
-            subject: "Reset Your Password - Fly Arzan",
-            text: `Reset your password by visiting: ${url}`,
-            html: `
+  try {
+    await transporter.sendMail({
+      from: defaultFrom,
+      to,
+      subject: "Reset Your Password - Fly Arzan",
+      text: `Reset your password by visiting: ${url}`,
+      html: `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -96,27 +92,27 @@ export async function sendPasswordResetEmail(
         </body>
         </html>
       `,
-        });
-        console.log(`[Email] Password reset email sent to ${to}`);
-        return { success: true };
-    } catch (error) {
-        console.error(`[Email] Failed to send password reset email to ${to}:`, error);
-        throw error;
-    }
+    });
+    console.log(`[Email] Password reset email sent to ${to}`);
+    return { success: true };
+  } catch (error) {
+    console.error(`[Email] Failed to send password reset email to ${to}:`, error);
+    throw error;
+  }
 }
 
 export async function sendVerificationEmail(
-    to: string,
-    token: string,
-    url: string
+  to: string,
+  token: string,
+  url: string
 ) {
-    try {
-        await transporter.sendMail({
-            from: `"${APP_NAME}" <${process.env.SMTP_USER}>`,
-            to,
-            subject: "Verify Your Email - Fly Arzan",
-            text: `Verify your email by visiting: ${url}`,
-            html: `
+  try {
+    await transporter.sendMail({
+      from: defaultFrom,
+      to,
+      subject: "Verify Your Email - Fly Arzan",
+      text: `Verify your email by visiting: ${url}`,
+      html: `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -180,11 +176,11 @@ export async function sendVerificationEmail(
         </body>
         </html>
       `,
-        });
-        console.log(`[Email] Verification email sent to ${to}`);
-        return { success: true };
-    } catch (error) {
-        console.error(`[Email] Failed to send verification email to ${to}:`, error);
-        throw error;
-    }
+    });
+    console.log(`[Email] Verification email sent to ${to}`);
+    return { success: true };
+  } catch (error) {
+    console.error(`[Email] Failed to send verification email to ${to}:`, error);
+    throw error;
+  }
 }

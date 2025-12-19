@@ -22,6 +22,7 @@ import customersModule from "@/features/admin/customersModule.js";
 import userModule from "@/features/user/userModule.js";
 import notificationModule from "@/features/notifications/notificationModule.js";
 import emailModule from "@/features/email/emailModule.js";
+import contactModule from "@/features/contact/contactModule.js";
 import airportModule from "@/features/airports/airportModule.js";
 import { initWebSocket } from "@/lib/websocket.js";
 
@@ -119,6 +120,7 @@ app.route("/cms", cmsModule); // Public CMS routes (uses /public/:slug)
 app.route("/geo-currency", geoCurrencyModule);
 app.route("/locations", locationModule);
 app.route("/flight-offers", offerModule);
+app.route("/contact", contactModule);
 app.route("/admin/analytics", analyticsModule);
 app.route("/admin/reports", reportsModule);
 app.route("/admin/logs", logsModule);

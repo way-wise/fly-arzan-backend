@@ -1,10 +1,13 @@
 import nodemailer from "nodemailer";
 
 // SMTP Configuration from environment variables
+const port = parseInt(process.env.SMTP_PORT || "587");
 const smtpConfig = {
     host: process.env.SMTP_HOST || "smtp.gmail.com",
-    port: parseInt(process.env.SMTP_PORT || "587"),
-    secure: process.env.SMTP_SECURE === "true", // true for 465, false for other ports
+    port: port,
+    // Force secure=false for port 587 (STARTTLS), force true for 465. 
+    // Otherwise fallback to env var or false.
+    secure: port === 465 ? true : (port === 587 ? false : (process.env.SMTP_SECURE === "true")),
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
@@ -14,8 +17,8 @@ const smtpConfig = {
 // Create reusable transporter
 const transporter = nodemailer.createTransport(smtpConfig);
 
-// Default sender
-const defaultFrom = process.env.SMTP_FROM || "Fly Arzan <noreply@flyarzan.com>";
+// Default sender - use SMTP_FROM or fallback to Resend test domain
+const defaultFrom = process.env.SMTP_FROM || "Fly Arzan <onboarding@resend.dev>";
 
 /**
  * Send a single email
@@ -26,12 +29,14 @@ export async function sendEmail({
     html,
     text,
     from = defaultFrom,
+    replyTo,
 }: {
     to: string;
     subject: string;
     html?: string;
     text?: string;
     from?: string;
+    replyTo?: string;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
     try {
         // Check if SMTP is configured
@@ -43,6 +48,7 @@ export async function sendEmail({
         const info = await transporter.sendMail({
             from,
             to,
+            replyTo,
             subject,
             text: text || html?.replace(/<[^>]*>/g, ""), // Strip HTML for text version
             html,
