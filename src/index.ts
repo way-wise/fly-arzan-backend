@@ -61,7 +61,7 @@ app.use("*", async (c, next) => {
   try {
     const id = randomUUID();
     c.res.headers.set("x-request-id", id);
-  } catch { }
+  } catch {}
   await next();
 });
 
@@ -147,11 +147,18 @@ app.notFound((c) => {
 // Error Handler
 app.onError(errorHandler);
 
+const port = Number(process.env.PORT);
+
+if (!port) {
+  console.error("PORT is not defined");
+  process.exit(1);
+}
+
 // Server
 const server = serve(
   {
     fetch: app.fetch,
-    port: process.env.PORT ? Number(process.env.PORT) : 8787,
+    port,
   },
   (info) => {
     console.log(`Server is running on http://localhost:${info.port}`);
