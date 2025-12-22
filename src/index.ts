@@ -151,7 +151,7 @@ app.onError(errorHandler);
 const server = serve(
   {
     fetch: app.fetch,
-    port: 8787,
+    port: process.env.PORT ? Number(process.env.PORT) : 8787,
   },
   (info) => {
     console.log(`Server is running on http://localhost:${info.port}`);
