@@ -46,7 +46,8 @@ app.use(
     origin: [
       process.env.APP_CLIENT_URL!,
       "http://localhost:5173",
-      "http://localhost:5174",
+      "https://flyarzan.com",
+      "https://www.flyarzan.com",
     ],
     credentials: true,
     allowHeaders: ["Content-Type", "Authorization", "x-session-id"],
@@ -161,7 +162,7 @@ const server = serve(
     port,
   },
   (info) => {
-    console.log(`Server is running on http://localhost:${info.port}`);
+    console.log(`Server is running on ${info.port}`);
   }
 );
 
