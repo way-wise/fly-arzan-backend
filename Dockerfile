@@ -1,5 +1,5 @@
 # Official Node image
-FROM node:lts
+FROM node:20-alpine
 
 WORKDIR /app
 
