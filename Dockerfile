@@ -1,7 +1,10 @@
-# Official Node image
-FROM node:20-alpine
+# Use Debian-based Node image (Prisma has issues with Alpine/musl)
+FROM node:20-slim
 
 WORKDIR /app
+
+# Install OpenSSL (required by Prisma)
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 # Copy only dependency files first (better caching)
 COPY package.json package-lock.json ./
