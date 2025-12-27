@@ -61,25 +61,25 @@ export async function sendPasswordResetEmail(
 
                   <!-- Main Content -->
                   <tr>
-                    <td style="padding: 40px 40px 30px 40px; text-align: center;">
-                      <h2 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 600; color: #333333; line-height: 1.3;">Reset Your Password</h2>
-                      <p style="margin: 0 auto 20px auto; font-size: 16px; line-height: 1.6; color: #666666; max-width: 80%;">
+                    <td align="center" style="padding: 40px 40px 30px 40px;">
+                      <h2 style="margin: 0 0 20px 0; font-size: 24px; font-weight: 600; color: #333333; line-height: 1.3; text-align: center;">Reset Your Password</h2>
+                      <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.6; color: #666666; text-align: center;">
                         We received a request to reset your password. Click the button below to set a new password. This link will expire in 1 hour.
                       </p>
 
                       <!-- CTA Button -->
-                      <table role="presentation" style="margin: 30px auto;">
+                      <table role="presentation" align="center" style="margin: 30px auto;">
                         <tr>
-                          <td>
+                          <td align="center">
                             <a href="${url}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; letter-spacing: 0.3px;">Reset Password</a>
                           </td>
                         </tr>
                       </table>
 
-                      <p style="margin: 30px auto 0 auto; font-size: 14px; line-height: 1.6; color: #999999; max-width: 80%;">
+                      <p style="margin: 30px 0 0 0; font-size: 14px; line-height: 1.6; color: #999999; text-align: center;">
                         If the button doesn't work, copy and paste this URL into your browser:
                       </p>
-                      <p style="margin: 10px auto 0 auto; padding: 12px; background-color: #f5f5f5; border-radius: 4px; font-size: 12px; word-break: break-all; color: #666666; text-align: center; max-width: 90%;">
+                      <p style="margin: 10px 0 0 0; padding: 12px; background-color: #f5f5f5; border-radius: 4px; font-size: 12px; word-break: break-all; color: #666666; text-align: center;">
                         ${url}
                       </p>
                     </td>
