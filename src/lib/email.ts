@@ -6,7 +6,12 @@ const transporter = nodemailer.createTransport({
   // For custom SMTP:
   host: process.env.SMTP_HOST,
   port: port,
-  secure: port === 465 ? true : (port === 587 ? false : (process.env.SMTP_SECURE === "true")),
+  secure:
+    port === 465
+      ? true
+      : port === 587
+      ? false
+      : process.env.SMTP_SECURE === "true",
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
@@ -15,7 +20,8 @@ const transporter = nodemailer.createTransport({
 
 const APP_NAME = "Fly Arzan";
 const APP_URL = process.env.APP_CLIENT_URL || "http://localhost:5173";
-const defaultFrom = process.env.SMTP_FROM || `${APP_NAME} <onboarding@resend.dev>`;
+const defaultFrom =
+  process.env.SMTP_FROM || `${APP_NAME} <onboarding@resend.dev>`;
 
 export async function sendPasswordResetEmail(
   to: string,
@@ -23,7 +29,12 @@ export async function sendPasswordResetEmail(
   url: string
 ) {
   try {
-    await transporter.sendMail({
+    console.log(`[Email] Attempting to send password reset email to ${to}`);
+    console.log(
+      `[Email] Using SMTP: ${process.env.SMTP_HOST}:${process.env.SMTP_PORT}`
+    );
+
+    const info = await transporter.sendMail({
       from: defaultFrom,
       to,
       subject: "Reset Your Password - Fly Arzan",
@@ -93,10 +104,19 @@ export async function sendPasswordResetEmail(
         </html>
       `,
     });
-    console.log(`[Email] Password reset email sent to ${to}`);
-    return { success: true };
+    console.log(
+      `[Email] ✓ Password reset email sent to ${to}:`,
+      info.messageId
+    );
+    return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error(`[Email] Failed to send password reset email to ${to}:`, error);
+    console.error(
+      `[Email] ✗ Failed to send password reset email to ${to}:`,
+      error
+    );
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    console.error(`[Email] Error details: ${errorMessage}`);
     throw error;
   }
 }
