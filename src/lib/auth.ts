@@ -15,8 +15,17 @@ export const auth = betterAuth({
     enabled: true,
     // Password reset configuration
     sendResetPassword: async ({ user, url, token }, request) => {
-      // Use void to not await - prevents timing attacks
-      void sendPasswordResetEmail(user.email, token, url);
+      console.log(`[Auth] Password reset requested for: ${user.email}`);
+      console.log(`[Auth] Reset URL: ${url}`);
+      try {
+        await sendPasswordResetEmail(user.email, token, url);
+        console.log(
+          `[Auth] Password reset email sent successfully to: ${user.email}`
+        );
+      } catch (error) {
+        console.error(`[Auth] Failed to send password reset email:`, error);
+        // Don't throw - we don't want to reveal if email exists
+      }
     },
   },
   // Social OAuth providers
@@ -48,7 +57,8 @@ export const auth = betterAuth({
         const userWithRole = user as typeof user & { role?: string };
         if (userWithRole.role === "super" || userWithRole.role === "admin") {
           throw new APIError("BAD_REQUEST", {
-            message: "Admin accounts cannot be deleted. Please contact support.",
+            message:
+              "Admin accounts cannot be deleted. Please contact support.",
           });
         }
       },
