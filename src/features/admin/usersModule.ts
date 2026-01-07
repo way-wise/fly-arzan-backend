@@ -15,7 +15,8 @@ app.get("/", requireAdmin, async (c) => {
   const searchValue = c.req.query("searchValue") || "";
   const searchField = c.req.query("searchField") || "email";
 
-  // Exclude super admin from the list
+  // Show all users including admins, but exclude super admin for security
+  // Note: Only ONE super admin should exist in the system
   const baseWhere = {
     role: { not: "super" },
   };
@@ -104,6 +105,30 @@ app.post("/:userId/set-role", requireAdmin, async (c) => {
 
   if (!role) {
     return c.json({ error: "Role is required" }, 400);
+  }
+
+  // Prevent creating multiple super admins
+  if (role === "super") {
+    const existingSuperAdmin = await prisma.user.findFirst({
+      where: { role: "super" },
+    });
+    
+    if (existingSuperAdmin && existingSuperAdmin.id !== userId) {
+      return c.json({ 
+        error: "Only one super admin is allowed in the system" 
+      }, 400);
+    }
+  }
+
+  // Get current user's session to check permissions
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+  const currentUserRole = session?.user?.role;
+
+  // Only super admin can assign super admin role
+  if (role === "super" && currentUserRole !== "super") {
+    return c.json({ 
+      error: "Only super admin can assign super admin role" 
+    }, 403);
   }
 
   const user = await prisma.user.update({

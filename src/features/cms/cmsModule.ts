@@ -95,6 +95,18 @@ app.post("/seed-defaults", async (c) => {
       title: "Visa Requirements",
       content: { countries: [] },
     },
+    {
+      slug: "covid_19_info",
+      title: "COVID-19 Travel Information",
+      content: {
+        hero: { title: "", subtitle: "" },
+        introduction: "",
+        guidelines: [],
+        travelRestrictions: "",
+        healthRequirements: "",
+        lastUpdated: new Date().toISOString(),
+      },
+    },
   ];
   for (const d of defaults) {
     await prisma.cmsPage.upsert({
