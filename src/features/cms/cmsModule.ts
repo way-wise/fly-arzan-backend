@@ -107,6 +107,16 @@ app.post("/seed-defaults", async (c) => {
         lastUpdated: new Date().toISOString(),
       },
     },
+    {
+      slug: "airport_info",
+      title: "Airport Information",
+      content: {
+        hero: { title: "", subtitle: "" },
+        introduction: "",
+        sections: [],
+        tips: [],
+      },
+    },
   ];
   for (const d of defaults) {
     await prisma.cmsPage.upsert({
