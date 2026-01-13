@@ -1,5 +1,7 @@
 import { Hono } from "hono";
+import type { Context } from "hono";
 import { prisma } from "@/lib/prisma.js";
+import { requireAdmin } from "@/lib/auth.js";
 
 const app = new Hono();
 
@@ -8,7 +10,7 @@ const app = new Hono();
 // ============================================
 
 // Get published page by slug (PUBLIC - for frontend pages)
-app.get("/public/:slug", async (c) => {
+app.get("/public/:slug", async (c: Context) => {
   const slug = c.req.param("slug");
   const page = await prisma.cmsPage.findFirst({
     where: {
@@ -31,7 +33,7 @@ app.get("/public/:slug", async (c) => {
 // ============================================
 
 // List all CMS pages (slugs and titles)
-app.get("/pages", async (c) => {
+app.get("/pages", requireAdmin, async (c: Context) => {
   const pages = await prisma.cmsPage.findMany({
     select: {
       id: true,
@@ -46,7 +48,7 @@ app.get("/pages", async (c) => {
 });
 
 // Get single page by slug
-app.get("/:slug", async (c) => {
+app.get("/:slug", requireAdmin, async (c: Context) => {
   const slug = c.req.param("slug");
   const page = await prisma.cmsPage.findUnique({ where: { slug } });
   if (!page) return c.json({ message: "Not found" }, 404);
@@ -54,25 +56,55 @@ app.get("/:slug", async (c) => {
 });
 
 // Upsert page by slug
-app.put("/:slug", async (c) => {
+app.put("/:slug", requireAdmin, async (c: Context) => {
   const slug = c.req.param("slug");
   const body = await c.req.json();
-  const { title, content, status = "published", updatedBy } = body ?? {};
+  const { title, content, status = "published", updatedBy } = body as {
+    title?: string;
+    content?: any;
+    status?: string;
+    updatedBy?: string;
+  };
+  
   if (!title || typeof title !== "string") {
     return c.json({ message: "title is required" }, 400);
   }
+  
+  // Get current user for audit trail
+  const user = c.get("user");
+  const actualUpdatedBy = updatedBy || user?.email || "system";
+  
   // content can be any JSON serializable structure
-  const saved = await prisma.cmsPage.upsert({
-    where: { slug },
-    update: { title, content, status, updatedBy },
-    create: { slug, title, content, status, updatedBy },
-  });
-  return c.json(saved);
+  try {
+    const saved = await prisma.cmsPage.upsert({
+      where: { slug },
+      update: { 
+        title, 
+        content: content as any, 
+        status, 
+        updatedBy: actualUpdatedBy 
+      },
+      create: { 
+        slug, 
+        title, 
+        content: content as any, 
+        status, 
+        updatedBy: actualUpdatedBy 
+      },
+    });
+    return c.json(saved);
+  } catch (error) {
+    console.error("CMS upsert error:", error);
+    return c.json({ 
+      message: "Failed to save page", 
+      error: error instanceof Error ? error.message : "Unknown error" 
+    }, 500);
+  }
 });
 
 // Seed default pages if missing
-app.post("/seed-defaults", async (c) => {
-  const defaults: Array<{ slug: string; title: string; content: any }> = [
+app.post("/seed-defaults", requireAdmin, async (c: Context) => {
+  const defaults: Array<{ slug: string; title: string; content: Record<string, any> }> = [
     { slug: "about_us", title: "About Us", content: { sections: [] } },
     { slug: "faq", title: "FAQ", content: { items: [] } },
     {
