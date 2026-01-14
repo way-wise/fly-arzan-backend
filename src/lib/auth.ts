@@ -38,7 +38,6 @@ export const auth = betterAuth({
   trustedOrigins: [
     process.env.APP_CLIENT_URL!,
     "http://localhost:5173",
-    "http://localhost:5174",
   ],
   advanced: {
     // Use lax for local development (same-site requests)
