@@ -141,12 +141,13 @@ app.post("/seed-defaults", requireAdmin, async (c: Context) => {
     },
     {
       slug: "airport_info",
-      title: "Airport Information",
+      title: "Airport Information Hub",
       content: {
-        hero: { title: "", subtitle: "" },
-        introduction: "",
-        sections: [],
-        tips: [],
+        hero: { 
+          title: "Airport Information Hub", 
+          subtitle: "Find detailed information about airports worldwide" 
+        },
+        airports: [],
       },
     },
   ];
