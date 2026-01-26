@@ -55,6 +55,47 @@ app.get("/:slug", requireAdmin, async (c: Context) => {
   return c.json(page);
 });
 
+// Get paginated airports with search
+app.get("/airport_info/airports/paginated", requireAdmin, async (c: Context) => {
+  const page = parseInt(c.req.query("page") || "0");
+  const limit = parseInt(c.req.query("limit") || "10");
+  const search = c.req.query("search") || "";
+
+  const cmsPage = await prisma.cmsPage.findUnique({
+    where: { slug: "airport_info" },
+  });
+
+  if (!cmsPage) {
+    return c.json({ airports: [], total: 0, page, limit });
+  }
+
+  const content = cmsPage.content as any;
+  let airports = (content?.airports || []) as any[];
+
+  // Filter by search query
+  if (search) {
+    const query = search.toLowerCase();
+    airports = airports.filter((airport: any) => {
+      return (
+        airport.name?.toLowerCase().includes(query) ||
+        airport.iataCode?.toLowerCase().includes(query) ||
+        airport.city?.toLowerCase().includes(query) ||
+        airport.country?.toLowerCase().includes(query)
+      );
+    });
+  }
+
+  const total = airports.length;
+  const paginatedAirports = airports.slice(page * limit, (page + 1) * limit);
+
+  return c.json({
+    airports: paginatedAirports,
+    total,
+    page,
+    limit,
+  });
+});
+
 // Upsert page by slug
 app.put("/:slug", requireAdmin, async (c: Context) => {
   const slug = c.req.param("slug");
